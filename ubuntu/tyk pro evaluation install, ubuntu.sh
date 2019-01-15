@@ -1,7 +1,7 @@
 
 # Basic install script/instructions for Tyk Pro (Gateway, Dashboard and Pump) for Ubuntu 18 and Mint 19
 
-# Version 1.2.3
+# Version 1.2.4
 # Peter Harris
 
 # NOTE: There are some very simple manual steps at the bottom of this file
@@ -86,7 +86,7 @@ sudo service tyk-gateway start
 echo '
 {
   "allow_insecure_configs": true,
-  "listen_address": "localhost",
+  "listen_address": "",
   "listen_port": 8080,
   "secret": "352d20ee67be67f6340b4c0605b044b7",
   "node_secret": "352d20ee67be67f6340b4c0605b044b7",
@@ -149,10 +149,11 @@ exit
 #Manual config
 #=============
 
-Add license by browsing to http://localhost:3000
+Add the Tyk license by browsing to the Tyk Dashboard http://localhost:3000
+Add the license in the lower box
 
 
-The following script will configure the bootstrap user and display the credentials
+Enter the following command lines to configure the Tyk Dashboard "bootstrap" user and display their credentials
 sudo service redis-server restart
 sudo service mongod restart
 sudo service tyk-dashboard restart
@@ -161,13 +162,22 @@ sudo service tyk-gateway restart
 sudo /opt/tyk-dashboard/install/bootstrap.sh localhost
 
 
-Login via the dashboard and add a more memorable user with admin priviledges
-Logout and login as the memorable user
+Browse to the Tyk Dashboard as before
+Login to teh Tyk Dasboard using the somewhat cryptic default login credentials generated above
+
+Add a more memorable User -
+    In the left-hand panel under the "System Management" heading, click on "Users" (The section headings fold away if clicked)
+    In the right-hand panel headed "Users and Access", click on "Add User" in the top right hand corner
+    Fill in First Name, Last Name, Email Address and Password.  Click on "Account is admin"
+    Click on "Save" in the top right hand corner
+    In the top of the window at the Right-hand end of the main Menu bar click on the current User and then click on logout
+
+Login as the newly created memorable User, be sure to use the email address.
 
 
-Config and test an api
-======================
-Login at localhost:3000 using the memorable admin credentials
+Config and test a Tyk Gateway API
+=================================
+Login at localhost:3000 using the memorable admin credentials as before
 
 System Management -> APIs
   Press "Add New API" button
@@ -184,7 +194,8 @@ System Management -> APIs
 
 
 In a browser goto "localhost:8080/api0"
+The contents from the httpbin site will be displayed.
 
-
+The Tyk Online documentation at https://tyk.io/docs/ is a good place to continue your evaluation of Tyk
 
 
