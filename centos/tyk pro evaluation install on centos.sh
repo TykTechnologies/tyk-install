@@ -1,7 +1,7 @@
 
-# Basic install script/instructions for Tyk Pro (Gateway, Dashboard and Pump) for Ubuntu 18 and Mint 19
+# Basic install script/instructions for Tyk Pro (Gateway, Dashboard and Pump) for Centos7
 
-# Version 1.2.5
+# Version 1.2.0
 # Peter Harris
 
 # NOTE: There are some very simple manual steps at the bottom of this file
@@ -14,80 +14,100 @@
 
 
 #Enable abort on error handling
-#===============================
+#==============================
 set -e
 
 
 #Update platform
 #===============
-sudo apt update
-sudo apt upgrade -y
+sudo yum upgrade -y
+#nmtui
 
-sudo apt install curl net-tools python -y
+
+#Add utilites for debug
+#======================
+sudo yum install net-tools -y
 
 
 #Redis
 #=====
-sudo apt install -y redis-server
-sudo service redis-server start
+sudo yum install epel-release -y
+sudo yum install redis -y
+sudo systemctl restart redis
 
 
 #Mongo
 #=====
-#https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
-echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list
-sudo apt update
-sudo apt install -y mongodb-org
+sudo sh -c "echo '
+[mongodb-org-4.0]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/redhat/7Server/mongodb-org/4.0/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-4.0.asc
+' > /etc/yum.repos.d/mongodb-org-4.0.repo"
 
-sudo service mongod start
-
-
-#HTTPS Transport
-#================
-sudo apt install -y apt-transport-https
+sudo yum install mongodb-org -y
+sudo systemctl restart mongod
 
 
 #Dashboard
 #=========
-curl -s -S -L https://packagecloud.io/tyk/tyk-dashboard/gpgkey | sudo apt-key add -
-echo "deb https://packagecloud.io/tyk/tyk-dashboard/ubuntu/ trusty main" | 
-sudo tee /etc/apt/sources.list.d/tyk_tyk-dashboard.list
-echo "deb-src https://packagecloud.io/tyk/tyk-dashboard/ubuntu/ trusty main" | sudo tee -a /etc/apt/sources.list.d/tyk_tyk-dashboard.list
-sudo apt update
-sudo apt install -y tyk-dashboard
+sudo sh -c "echo '
+[tyk_tyk-dashboard]
+name=tyk_tyk-dashboard
+baseurl=https://packagecloud.io/tyk/tyk-dashboard/el/7/\$basearch
+repo_gpgcheck=1
+gpgcheck=0
+enabled=1
+gpgkey=https://packagecloud.io/tyk/tyk-dashboard/gpgkey
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+metadata_expire=300
+' > /etc/yum.repos.d/tyk_tyk-dashboard.repo"
 
-sudo /opt/tyk-dashboard/install/setup.sh --listenport=3000 –redishost=localhost --redisport=6379 –mongo=mongodb://localhost/tyk_analytics --tyk_api_hostname=localhost --tyk_node_hostname=http://localhost --tyk_node_port=8080 --portal_root=/portal --domain=localhost
+sudo yum install tyk-dashboard -y
 
-sudo service tyk-dashboard start
+sudo /opt/tyk-dashboard/install/setup.sh --listenport=3000 --redishost=localhost --redisport=6379 --mongo=mongodb://localhost/tyk_analytics --tyk_api_hostname=localhost --tyk_node_hostname=http://localhost --tyk_node_port=8080 --portal_root=/portal --domain=localhost
+
+sudo systemctl restart tyk-dashboard
 
 
 #Pump
 #====
-curl -s -S -L https://packagecloud.io/tyk/tyk-pump/gpgkey | sudo apt-key add -
+sudo sh -c "echo '
+[tyk_tyk-pump]
+name=tyk_tyk-pump
+baseurl=https://packagecloud.io/tyk/tyk-pump/el/7/\$basearch
+repo_gpgcheck=1
+gpgcheck=0
+enabled=1
+gpgkey=https://packagecloud.io/tyk/tyk-pump/gpgkey
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+metadata_expire=300
+' > /etc/yum.repos.d/tyk_tyk-pump.repo"
 
-echo "deb https://packagecloud.io/tyk/tyk-pump/ubuntu/ trusty main" | sudo tee /etc/apt/sources.list.d/tyk_tyk-pump.list
-echo "deb-src https://packagecloud.io/tyk/tyk-pump/ubuntu/ trusty main" | sudo tee -a /etc/apt/sources.list.d/tyk_tyk-pump.list
-sudo apt-get update
-sudo apt-get install -y tyk-pump
-
-sudo /opt/tyk-pump/install/setup.sh --redishost=localhost --redisport=6379 --mongo=mongodb://localhost/tyk_analytics
-
-sudo service tyk-pump start
+sudo yum install tyk-pump -y
+sudo systemctl restart tyk-pump
 
 
 #Gateway
 #=======
-curl -s -S -L https://packagecloud.io/tyk/tyk-gateway/gpgkey | sudo apt-key add -
-echo "deb https://packagecloud.io/tyk/tyk-gateway/ubuntu/ trusty main" | sudo tee /etc/apt/sources.list.d/tyk_tyk-gateway.list
-echo "deb-src https://packagecloud.io/tyk/tyk-gateway/ubuntu/ trusty main" | sudo tee -a /etc/apt/sources.list.d/tyk_tyk-gateway.list
-sudo apt update
-sudo apt install -y tyk-gateway
+sudo sh -c "echo '
+[tyk_tyk-gateway]
+name=tyk_tyk-gateway
+baseurl=https://packagecloud.io/tyk/tyk-gateway/el/7/\$basearch
+repo_gpgcheck=1
+gpgcheck=0
+enabled=1
+gpgkey=https://packagecloud.io/tyk/tyk-gateway/gpgkey
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+metadata_expire=300
+' > /etc/yum.repos.d/tyk_tyk-gateway.repo"
 
-sudo service tyk-gateway start
-
-
-# The following will create a basic gateway config file
+sudo yum install tyk-gateway -y
 
 echo '
 {
@@ -130,16 +150,22 @@ echo '
 
 sudo mv /tmp/tyk.conf /opt/tyk-gateway/tyk.conf
 
-sudo service tyk-gateway restart
+sudo systemctl restart tyk-gateway
 
 
 #Enable start on boot
 #====================
-sudo systemctl enable redis-server
+sudo systemctl enable redis
 sudo systemctl enable mongod
 sudo systemctl enable tyk-dashboard
 sudo systemctl enable tyk-pump
 sudo systemctl enable tyk-gateway
+
+#Open firewall ports
+#===================
+sudo firewall-cmd --permanent --zone=public --add-port=3000/tcp
+sudo firewall-cmd --permanent --zone=public --add-port=8080/tcp
+sudo systemctl restart firewalld
 
 
 #Check systen logging is operational
@@ -156,18 +182,18 @@ exit
 #Manual config
 #=============
 
-Add the Tyk license by browsing to the Tyk Dashboard http://localhost:3000
+Add the Tyk license by browsing to the Tyk Dashboard http://<Tyk Server IP>:3000
 Add the license in the lower box
 
 
 Enter the following command lines to configure the Tyk Dashboard "bootstrap" user and display their credentials
-sudo service redis-server restart
-sudo service mongod restart
-sudo service tyk-dashboard restart
-sudo service tyk-pump restart
-sudo service tyk-gateway restart
-sleep 2
-sudo /opt/tyk-dashboard/install/bootstrap.sh localhost
+sudo systemctl restart redis
+sudo systemctl restart mongod
+sudo systemctl restart tyk-dashboard
+sudo systemctl restart tyk-pump
+sudo systemctl restart tyk-gateway
+curl localhost:3000
+/opt/tyk-dashboard/install/bootstrap.sh localhost
 
 
 Browse to the Tyk Dashboard as before
@@ -201,7 +227,7 @@ System Management -> APIs
     Press "Save" button
 
 
-In a browser goto localhost:8080/api0
+In a browser goto <Tyk Server IP>:8080/api0
 The contents from the httpbin site will be displayed.
 
 The Tyk Online documentation at https://tyk.io/docs/ is a good place to continue your evaluation of Tyk
