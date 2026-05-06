@@ -27,7 +27,7 @@ services:
       - tyk-gateway-certs:/opt/tyk-gateway/certs
       # - ../utils/GeoLite2-Country.mmdb:/opt/tyk-gateway/databases/GeoLite2-Country.mmdb
     networks:
-      - tyk-hybrid
+      - tyk
     depends_on:
       - tyk-redis
 
@@ -46,7 +46,7 @@ services:
 networks:
   tyk:
     driver: bridge
-    name: tyk-hybrid
+    name: tyk
 
 volumes:
   redis-data:
