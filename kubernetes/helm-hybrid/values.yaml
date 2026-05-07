@@ -52,7 +52,7 @@ tyk-gateway:
   gateway:
     image:
       repository: tykio/tyk-gateway-ee
-      tag: v5.12.0
+      tag: v5.12.1
       pullPolicy: IfNotPresent
 
     # Internal hostname identifier
@@ -210,7 +210,7 @@ tyk-pump:
   pump:
     image:
       repository: tykio/tyk-pump-docker-pub
-      tag: v1.14.0
+      tag: v1.14.1
       pullPolicy: IfNotPresent
 
     replicaCount: 1

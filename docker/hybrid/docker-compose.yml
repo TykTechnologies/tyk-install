@@ -2,23 +2,23 @@ services:
   tyk-redis:
     restart: unless-stopped
     image: redis:7.2.0
-    container_name: tyk-redis
+    container_name: tyk-redis-hybrid
     ports:
       - "6379:6379"
     volumes:
-      - redis-data:/data
+      - redis-data-hybrid:/data
     networks:
-      - tyk
+      - tyk-hybrid
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
 
   tyk-gateway:
     restart: unless-stopped
-    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.12.0}
-    container_name: tyk-gateway
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.12.1}
+    container_name: tyk-gateway-hybrid
     ports:
       - "8080:8080"
     env_file:
@@ -33,23 +33,23 @@ services:
 
   tyk-pump:
     restart: unless-stopped
-    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.14.0}
-    container_name: tyk-pump
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.14.1}
+    container_name: tyk-pump-hybrid
     env_file:
       - ./confs/pump.env
     networks:
-      - tyk
+      - tyk-hybrid
     depends_on:
       tyk-redis:
         condition: service_healthy
 
 networks:
-  tyk:
+  tyk-hybrid:
     driver: bridge
     name: tyk
 
 volumes:
-  redis-data:
+  redis-data-hybrid:
     name: tyk-hybrid-redis-data
   tyk-gateway-certs:
     name: tyk-hybrid-gateway-certs

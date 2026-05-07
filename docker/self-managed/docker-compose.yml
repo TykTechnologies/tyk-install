@@ -10,7 +10,7 @@ services:
     networks:
       - tyk
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -29,7 +29,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ../utils/dbs.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tykuser -d tyk_analytics"]
+      test: [ "CMD-SHELL", "pg_isready -U tykuser -d tyk_analytics" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,7 +38,7 @@ services:
 
   tyk-dashboard:
     restart: unless-stopped
-    image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.12.0}
+    image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.12.1}
     container_name: tyk-dashboard
     ports:
       - "3000:3000"
@@ -56,7 +56,7 @@ services:
 
   tyk-gateway:
     restart: unless-stopped
-    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.12.0}
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.12.1}
     container_name: tyk-gateway
     ports:
       - "8080:8080"
@@ -73,7 +73,7 @@ services:
 
   tyk-pump:
     restart: unless-stopped
-    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.14.0}
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.14.1}
     container_name: tyk-pump
     env_file:
       - ./confs/pump.env
@@ -87,7 +87,7 @@ services:
 
   tyk-portal:
     restart: unless-stopped
-    image: tykio/portal:${PORTAL_VERSION:-v1.17.0}
+    image: tykio/portal:${PORTAL_VERSION:-v1.17.1}
     container_name: tyk-portal
     ports:
       - "3001:3001"
@@ -99,7 +99,7 @@ services:
       tyk-postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/ready"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3001/ready" ]
       interval: 10s
       timeout: 5s
       retries: 10
