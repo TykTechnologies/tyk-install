@@ -419,7 +419,7 @@ tyk-dev-portal:
     tag: v1.17.1
     pullPolicy: IfNotPresent
 
-  hostName: tyk-portal.local
+  hostName: tyk-dev-portal.local
   replicaCount: 1
   containerPort: 3001
 
@@ -448,6 +448,8 @@ tyk-dev-portal:
       value: "10" # PROD: Increase to reduce API refresh frequency
     - name: PORTAL_TIB_ENABLED
       value: "true" # Enable Tyk Identity Broker for SSO integration
+    - name: PORTAL_DISABLECSRFCHECK
+      value: "true" # Set to "true" when using HTTP/LoadBalancer IP access; in PROD set to "false" with proper domain + TLS + Ingress
     # - name: PORTAL_THEMING_DISABLE_UPLOAD
     #   value: "false" # PROD: Set to true to prevent theme uploads via UI
     # - name: PORTAL_API_SECRET
@@ -456,9 +458,9 @@ tyk-dev-portal:
     ### -----------------------------------------------------------------------------
     ### LOGGING
     ### -----------------------------------------------------------------------------
-    - name: PORTAL_LOG_FORMAT
+    - name: PORTAL_LOGFORMAT
       value: "dev" # PROD: Set to "prod" for production-optimized logging
-    - name: PORTAL_LOG_LEVEL
+    - name: PORTAL_LOGLEVEL
       value: "info" # PROD: Set to "error" to reduce log volume
     - name: PORTAL_AUDIT_LOG_ENABLE
       value: "true" # PROD: set to true to enable audit trail logging

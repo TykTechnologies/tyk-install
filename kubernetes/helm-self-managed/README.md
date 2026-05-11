@@ -740,6 +740,10 @@ kubectl delete secret tyk-conf -n tyk
 source .env
 ```
 
+### Portal Login Returns "Bad Request"
+
+Set `PORTAL_DISABLECSRFCHECK=true` in values.yaml under `tyk-dev-portal.extraEnvs`. This is needed when accessing the Portal via HTTP/LoadBalancer IP. Set to `false` when using a proper domain with TLS and Ingress.
+
 ### Database Connection Issues
 
 ```bash
