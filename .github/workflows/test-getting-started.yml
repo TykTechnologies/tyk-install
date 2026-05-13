@@ -29,8 +29,9 @@ jobs:
           DASH_LICENSE: ${{ secrets.DASH_LICENSE }}
         run: |
           cd docker/self-managed
-          echo "TYK_LICENSE_KEY=${DASH_LICENSE}" > .env
-          echo "TYK_PORTAL_LICENSE=${DASH_LICENSE}" >> .env
+          cp .env.example .env
+          sed -i "s|TYK_LICENSE_KEY=|TYK_LICENSE_KEY=${DASH_LICENSE}|" .env
+          sed -i "s|TYK_PORTAL_LICENSE=|TYK_PORTAL_LICENSE=${DASH_LICENSE}|" .env
           cd ../getting-started
           chmod +x start.sh
           ./start.sh
