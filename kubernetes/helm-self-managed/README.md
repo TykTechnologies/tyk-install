@@ -49,7 +49,7 @@ Copy the `.env.example` file and update with your values:
 cp .env.example .env
 
 # Edit .env file with your license key
-# Required: DASH_LICENSE
+# Required: TYK_LICENSE_KEY
 ```
 
 **IMPORTANT: Load environment variables:**
@@ -71,9 +71,9 @@ kubectl create secret generic tyk-conf \
   --namespace tyk \
   --from-literal=APISecret=$TYK_API_SECRET \
   --from-literal=AdminSecret=$TYK_ADMIN_SECRET \
-  --from-literal=DashLicense=$DASH_LICENSE \
+  --from-literal=DashLicense=$TYK_LICENSE_KEY \
   --from-literal=OperatorLicense=$TYK_OPERATOR_LICENSE \
-  --from-literal=DevPortalLicense=$DASH_LICENSE \
+  --from-literal=DevPortalLicense=$TYK_PORTAL_LICENSE \
   --from-literal=adminUserFirstName=$ADMIN_FIRST_NAME \
   --from-literal=adminUserLastName=$ADMIN_LAST_NAME \
   --from-literal=adminUserEmail=$ADMIN_EMAIL \
@@ -588,8 +588,9 @@ Stores all sensitive configuration for the Tyk stack:
 
 - **APISecret** - Shared secret between Gateway & Dashboard for API definition sync
 - **AdminSecret** - Dashboard admin API authentication
-- **DashLicense** - Dashboard and Portal license key
+- **DashLicense** - Dashboard license key
 - **OperatorLicense** - Tyk Operator license key
+- **DevPortalLicense** - Developer Portal license key
 - **adminUserEmail/Password** - Bootstrap admin user credentials
 - **DashDatabaseConnectionString** - PostgreSQL connection for Dashboard
 - **DevPortalDatabaseConnectionString** - PostgreSQL connection for Portal
@@ -622,7 +623,7 @@ kubectl create secret generic tyk-conf \
   --from-literal=AdminSecret=$TYK_ADMIN_SECRET \
   --from-literal=DashLicense=new-license-key \
   --from-literal=OperatorLicense=$TYK_OPERATOR_LICENSE \
-  --from-literal=DevPortalLicense=new-license-key \
+  --from-literal=DevPortalLicense=$TYK_PORTAL_LICENSE \
   --from-literal=adminUserFirstName=$ADMIN_FIRST_NAME \
   --from-literal=adminUserLastName=$ADMIN_LAST_NAME \
   --from-literal=adminUserEmail=$ADMIN_EMAIL \

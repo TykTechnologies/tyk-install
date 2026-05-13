@@ -19,18 +19,19 @@ cd docker/self-managed
 # Copy example env file and add your license keys
 cp .env.example .env
 
-# Edit .env file with your license key
-# Required: DASH_LICENSE
+# Edit .env file with your license keys
+# Required: TYK_LICENSE_KEY, TYK_PORTAL_LICENSE
 ```
 
 **CRITICAL:** Ensure NO SPACES around the `=` sign in your `.env` file:
 
 ```bash
 # Correct
-DASH_LICENSE=eyJhbGciOiJSUzI1NiIsInR5cCI6...
+TYK_LICENSE_KEY=eyJhbGciOiJSUzI1NiIsInR5cCI6...
 
 # Wrong - will fail
-DASH_LICENSE = eyJhbGciOiJSUzI1NiIsInR5cCI6...
+TYK_LICENSE_KEY = eyJhbGciOiJSUzI1NiIsInR5cCI6...
+```
 
 ---
 
@@ -150,7 +151,9 @@ curl http://localhost:8080/httpbin/get -H "Authorization: <your-api-key>"
 
 **Main secrets in `.env`:**
 
-- **DASH_LICENSE** - Dashboard and Portal license (required)
+- **TYK_LICENSE_KEY** - Dashboard license (required)
+- **TYK_PORTAL_LICENSE** - Portal license (required for Portal)
+
 **Service secrets in config files:**
 
 - **TYK_GW_SECRET** - Gateway API secret (must match Dashboard)
