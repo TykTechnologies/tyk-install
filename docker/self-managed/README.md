@@ -418,12 +418,6 @@ PORTAL_VERSION=v1.17.1
 
 ---
 
-### Troubleshooting: Portal Login Returns "Bad Request"
-
-Set `PORTAL_DISABLECSRFCHECK=true` in `confs/portal.env`. This is needed when accessing the Portal via HTTP without a proper domain. Set to `false` when using a domain with TLS.
-
----
-
 ## Resources
 
 - [Installation Documentation](https://tyk.io/docs/tyk-self-managed/docker)
