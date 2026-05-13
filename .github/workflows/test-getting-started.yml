@@ -11,12 +11,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup Docker
-        uses: docker/setup-buildx-action@v2
+      - name: Validate license secret
+        run: |
+          if [ -z "${{ secrets.DASH_LICENSE }}" ]; then
+            echo "Error: DASH_LICENSE secret is not set"
+            exit 1
+          fi
 
       - name: Run Getting Started Script
         env:
@@ -29,14 +34,42 @@ jobs:
           chmod +x start.sh
           ./start.sh
 
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for Portal to be ready..."
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:3001/ready > /dev/null 2>&1; then
+              echo "Portal is ready"
+              break
+            fi
+            echo "Attempt $i/20 - Portal not ready yet, waiting 5s..."
+            sleep 5
+          done
+
       - name: Verify containers are running
         run: |
           cd docker/getting-started
           docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps
-          
-          # Check if any container exited
-          if docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps --format json | grep -q '"State":"exited"' ; then
+
+          if docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps --format json | grep -q '"State":"exited"'; then
             echo "Some containers failed to start or exited unexpectedly."
             docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml logs
             exit 1
           fi
+
+      - name: Smoke test services
+        run: |
+          echo "Testing Gateway..."
+          curl -sf http://localhost:8080/hello
+
+          echo "Testing Dashboard..."
+          curl -sf http://localhost:3000/hello
+
+          echo "Testing Portal..."
+          curl -sf http://localhost:3001/ready
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd docker/getting-started
+          docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml down -v --remove-orphans || true
