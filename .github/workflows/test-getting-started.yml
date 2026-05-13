@@ -1,12 +1,11 @@
 name: Test Getting Started
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+    paths:
+      - 'docker/self-managed/confs/**'
   workflow_dispatch:
 
 jobs:
