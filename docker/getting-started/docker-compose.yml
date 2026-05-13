@@ -1,0 +1,9 @@
+version: '3.9'
+services:
+  httpbin:
+    image: mccutchen/go-httpbin:v2.13.4
+    container_name: httpbin
+    ports:
+      - "8081:8080"
+    networks:
+      - tyk
