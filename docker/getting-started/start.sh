@@ -9,7 +9,7 @@ sleep 15
 
 echo "🛠️ Bootstrapping APIs and Portal..."
 docker run --rm \
-  --network tyk-getting-started_tyk \
+  --network tyk \
   -v $(pwd)/bootstrap:/bootstrap \
   -w /bootstrap \
   ghcr.io/orange-opensource/hurl:latest \

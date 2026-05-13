@@ -29,17 +29,17 @@ Automates the complete initial setup of a Tyk deployment:
 
 ### Prerequisites
 
-#### Docker Compose
-
-- External `tyk` network must exist
-- Tyk Dashboard must be running at `http://tyk-dashboard:3000`
-- Tyk Gateway must be running at `http://tyk-gateway:8080`
-- (Optional) Tyk Portal running at `http://tyk-portal:3001`
-- Valid `TYK_LICENSE_KEY` in `.env` file
+- Valid `DASH_LICENSE` in `.env` file
 
 ### Docker Compose
 
 **1. Set License Key**
+
+Create or edit `.env` file:
+
+```bash
+DASH_LICENSE=your-license-key-here
+```
 
 Create or edit `.env` file:
 
@@ -62,7 +62,6 @@ docker compose run --rm tyk-bootstrap
 ```bash
 cat bootstrap-output/bootstrap-credentials.txt
 ```
-
 ---
 
 ### Standalone Script
@@ -71,7 +70,7 @@ Run the script directly without Docker:
 
 ```bash
 # Set environment variables
-export TYK_LICENSE_KEY="your-license-key"
+export DASH_LICENSE="your-license-key"
 export DASHBOARD_URL="http://localhost:3000"
 export GATEWAY_URL="http://localhost:8080"
 export PORTAL_URL="http://localhost:3001"
@@ -82,10 +81,9 @@ bash bootstrap.sh
 ```
 
 ## 📋 Environment Variables
-
 | Variable          | Default                     | Required | Description                     |
 | ----------------- | --------------------------- | -------- | ------------------------------- |
-| `TYK_LICENSE_KEY` | -                           | ✅       | Tyk Dashboard license key       |
+| `DASH_LICENSE`    | -                           | ✅       | Tyk Dashboard license key       |
 | `DASHBOARD_URL`   | `http://tyk-dashboard:3000` | ✅       | Dashboard URL                   |
 | `GATEWAY_URL`     | `http://tyk-gateway:8080`   | ✅       | Gateway URL                     |
 | `PORTAL_URL`      | `http://tyk-portal:3001`    | ⚠️       | Developer Portal URL (optional) |
@@ -257,14 +255,14 @@ curl http://localhost:3000/hello
 local max_attempts=30  # Change to 60
 ```
 
-**"TYK_LICENSE_KEY not set" error:**
+**"DASH_LICENSE not set" error:**
 
 ```bash
 # Check .env file exists
 cat .env
 
 # Verify license key is set
-grep TYK_LICENSE_KEY .env
+grep DASH_LICENSE .env
 
 ```
 

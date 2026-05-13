@@ -19,7 +19,11 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Run Getting Started Script
+        env:
+          DASH_LICENSE: ${{ secrets.DASH_LICENSE }}
         run: |
-          cd docker/getting-started
+          cd docker/self-managed
+          echo "DASH_LICENSE=${DASH_LICENSE}" > .env
+          cd ../getting-started
           chmod +x start.sh
           ./start.sh
