@@ -6,7 +6,8 @@
 BOOTSTRAP_MARKER="./bootstrap-output/.bootstrap_completed"
 CREDS_FILE="./bootstrap-output/bootstrap-credentials.txt"
 #### environment vars to set if running script standalone not through docker-compose
-# DASH_LICENSE=
+# TYK_LICENSE_KEY=
+# DASHBOARD_URL=http://localhost:3000
 # GATEWAY_URL=https://localhost:8080
 # PORTAL_URL=http://localhost:3001
 # ADMIN_SECRET=admin-secret
@@ -67,8 +68,8 @@ check_if_already_bootstrapped() {
     fi
 }
 verify_license_key() {
-    if [ -z "$DASH_LICENSE" ]; then
-        log_error "DASH_LICENSE not set"
+    if [ -z "$TYK_LICENSE_KEY" ]; then
+        log_error "TYK_LICENSE_KEY not set"
         exit 1
     fi
     log_success "License key found"

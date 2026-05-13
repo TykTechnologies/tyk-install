@@ -23,7 +23,20 @@ jobs:
           DASH_LICENSE: ${{ secrets.DASH_LICENSE }}
         run: |
           cd docker/self-managed
-          echo "DASH_LICENSE=${DASH_LICENSE}" > .env
+          echo "TYK_LICENSE_KEY=${DASH_LICENSE}" > .env
+          echo "TYK_PORTAL_LICENSE=${DASH_LICENSE}" >> .env
           cd ../getting-started
           chmod +x start.sh
           ./start.sh
+
+      - name: Verify containers are running
+        run: |
+          cd docker/getting-started
+          docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps
+          
+          # Check if any container exited
+          if docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps --format json | grep -q '"State":"exited"' ; then
+            echo "Some containers failed to start or exited unexpectedly."
+            docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml logs
+            exit 1
+          fi

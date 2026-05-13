@@ -6,7 +6,7 @@ services:
     networks:
       - tyk
     environment:
-      - DASH_LICENSE=${DASH_LICENSE}
+      - TYK_LICENSE_KEY=${TYK_LICENSE_KEY}
       - DASHBOARD_URL=http://tyk-dashboard:3000
       - GATEWAY_URL=http://tyk-gateway:8080
       - PORTAL_URL=http://tyk-portal:3001
