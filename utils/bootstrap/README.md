@@ -41,11 +41,6 @@ Create or edit `.env` file:
 DASH_LICENSE=your-license-key-here
 ```
 
-Create or edit `.env` file:
-
-```bash
-TYK_LICENSE_KEY=your-license-key-here
-```
 
 **2. Run Bootstrap**
 
