@@ -1,4 +1,4 @@
-# Tyk PoC Repository
+# Tyk Install Repository
 
 Tyk deployment configurations for Docker and Kubernetes. All configurations are transparent, documented, follow best practices, and ready to use.
 
