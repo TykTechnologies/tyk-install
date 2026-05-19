@@ -37,7 +37,7 @@ GRPC_AUTH_TOKEN=change-this-token
 GRPC_AUTH_TOKEN = change-this-token
 ```
 
-Ensure `ai-studio.localhost` resolves to your local machine. Many systems resolve `*.localhost` automatically; if yours does not, add a local hosts entry:
+Ensure `ai-studio.localhost` resolves to your local machine. add a local hosts entry:
 
 ```bash
 echo "127.0.0.1 ai-studio.localhost" | sudo tee -a /etc/hosts
@@ -47,7 +47,7 @@ echo "127.0.0.1 ai-studio.localhost" | sudo tee -a /etc/hosts
 
 ### 2. Generate Local TLS Certificates
 
-AI Studio is configured to serve HTTPS on `ai-studio.localhost`.
+Serve on `ai-studio.localhost`.
 
 ```bash
 mkdir -p studio-certs
@@ -131,8 +131,6 @@ curl -k https://ai-studio.localhost:4000/auth/features
 | `confs/microgateway.env`     | Edge Microgateway configuration                                |
 | `confs/analytics-pulse.yaml` | Analytics pulse plugin configuration                           |
 | `utils/dbs.sql`              | PostgreSQL initialization script for the Microgateway database |
-
-> **Note for AWS Fargate and similar platforms:** These env files serve as a reference for required environment variables. For Fargate/ECS deployments, configure these variables directly in your Task Definitions and use AWS Secrets Manager for sensitive values.
 
 ### Secrets Management
 
@@ -223,7 +221,6 @@ docker-compose up -d
 
 Check the response body for the exact reason:
 
-- `email already in use, please log in, verify emil, or reset password` means the user already exists. Log in with that user or reset the local database.
 - `password must contain at least one uppercase letter, one lowercase letter, one number, and one special character` means the password failed backend validation.
 
 Backend password validation accepts special characters from this set:
@@ -232,6 +229,6 @@ Backend password validation accepts special characters from this set:
 ! @ # $ % ^ & * ( ) , . ? " : { } | < >
 ```
 
-For local testing, a password like `Password123!` satisfies the backend rule.
+For local testing, a password like `ChangeMe123!` satisfies the backend rule.
 
 ---
