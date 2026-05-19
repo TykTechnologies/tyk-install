@@ -1,4 +1,4 @@
-# Tyk Self-Managed Kubernetes PoC - Quick Guide
+# Tyk Self-Managed Kubernetes Install - Quick Guide
 
 ## Prerequisites
 
@@ -517,7 +517,7 @@ curl -X POST http://localhost:3000/api/apis/oas \
   -H 'Content-Type: application/json' \
   -d '{
           "info": {
-            "description": "Test API using httpbin.org for PoC demonstration",
+            "description": "Test API using httpbin.org for Install demonstration",
             "title": "Httpbin Test API",
             "version": "1.0.0"
           },

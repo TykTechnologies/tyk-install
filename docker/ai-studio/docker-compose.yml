@@ -1,0 +1,74 @@
+services:
+  tyk-ai-studio:
+    restart: unless-stopped
+    image: tykio/tyk-ai-studio:${AI_STUDIO_VERSION:-v2.1.0-rc-1}
+    container_name: tyk-ai-studio
+    ports:
+      - "4000:8080"
+      - "9090:9090"
+    env_file:
+      - ./confs/studio.env
+    volumes:
+      - ./confs/studio.env:/app/.env
+      - ./studio-data:/app/data
+      - ./studio-certs:/app/certs
+      - ./plugins:/app/plugins
+      - ./plugins:/plugins
+      - ./plugins:/opt/plugins
+    networks:
+      - tyk-ai-studio
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  microgateway:
+    restart: unless-stopped
+    image: tykio/tyk-microgateway:${MICROGATEWAY_VERSION:-v2.1.0-rc-1}
+    container_name: tyk-ai-microgateway
+    ports:
+      - "9091:8080"
+    env_file:
+      - ./confs/microgateway.env
+    volumes:
+      - ./confs/microgateway.env:/app/.env
+      - ./confs/analytics-pulse.yaml:/app/analytics-pulse.yaml
+      - ./mgw-plugins:/var/lib/microgateway
+      - ./plugins:/app/plugins
+      - ./plugins:/plugins
+      - ./plugins:/opt/plugins
+    networks:
+      - tyk-ai-studio
+    depends_on:
+      tyk-ai-studio:
+        condition: service_started
+
+  postgres:
+    restart: unless-stopped
+    image: postgres:16-alpine
+    container_name: tyk-ai-postgres
+    environment:
+      POSTGRES_USER: tykuser
+      POSTGRES_PASSWORD: tykSecurePass123
+      POSTGRES_DB: tyk_ai_studio
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./utils/dbs.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tykuser -d tyk_ai_studio"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - tyk-ai-studio
+
+networks:
+  tyk-ai-studio:
+    driver: bridge
+    name: tyk-ai-studio
+
+volumes:
+  pgdata:
+    name: tyk-ai-studio-postgres-data

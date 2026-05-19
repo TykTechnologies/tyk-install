@@ -1,4 +1,4 @@
-# Tyk Hybrid Data Plane Kubernetes PoC - Quick Guide
+# Tyk Hybrid Data Plane Kubernetes Install - Quick Guide
 
 ## Prerequisites
 
