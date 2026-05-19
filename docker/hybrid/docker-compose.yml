@@ -27,7 +27,7 @@ services:
       - tyk-gateway-certs:/opt/tyk-gateway/certs
       # - ../utils/GeoLite2-Country.mmdb:/opt/tyk-gateway/databases/GeoLite2-Country.mmdb
     networks:
-      - tyk
+      - tyk-hybrid
     depends_on:
       - tyk-redis
 
