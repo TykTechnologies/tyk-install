@@ -22,6 +22,7 @@ Choose your deployment:
 | ---------------- | --------------------------------------------------------------- | -------------------------------- |
 | **Self-Managed** | Full stack: Dashboard, Gateway, Portal, Pump, Redis, PostgreSQL | [README](./docker/self-managed/) |
 | **Hybrid**       | Data plane connecting to Tyk Cloud/MDCB: Gateway, Pump, Redis   | [README](./docker/hybrid/)       |
+| **AI Studio**    | AI Studio, Microgateway, analytics pulse, and PostgreSQL        | [README](./docker/ai-studio/)    |
 
 ### Kubernetes (Helm)
 
@@ -54,10 +55,11 @@ Located in `docker/utils/`:
 ## Repository Structure
 
 ```text
-tyk-pocs/
+tyk-install/
 ├── docker/
 │   ├── self-managed/      # Full stack Docker deployment
 │   ├── hybrid/            # Hybrid data plane Docker deployment
+│   ├── ai-studio/         # AI Studio Docker deployment
 │   └── utils/             # Shared Docker utilities
 ├── kubernetes/
 │   ├── helm-self-managed/ # Full stack Helm deployment

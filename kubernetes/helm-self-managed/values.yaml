@@ -502,4 +502,4 @@ tyk-bootstrap:
     sslInsecureSkipVerify: false
 
     org:
-      name: "PoC Organization"
+      name: "Install Organization"

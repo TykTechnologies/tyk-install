@@ -1,4 +1,4 @@
-# Tyk Hybrid Data Plane Docker PoC - Quick Guide
+# Tyk Hybrid Data Plane Docker Install - Quick Guide
 
 ## Prerequisites
 

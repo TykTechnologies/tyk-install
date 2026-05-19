@@ -16,7 +16,7 @@
       "pattern": "<.*>"
     },
     {
-      "pattern": "github.com/TykTechnologies/tyk-pocs"
+      "pattern": "github.com/TykTechnologies/tyk-install"
     }
   ],
   "aliveStatusCodes": [200, 206, 301, 302, 403]

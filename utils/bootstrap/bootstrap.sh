@@ -252,7 +252,7 @@ get_or_create_test_api() {
             --header 'Content-Type: application/json' \
             --data '{
           "info": {
-            "description": "Test API using httpbin.org for PoC demonstration",
+            "description": "Test API using httpbin.org for Install demonstration",
             "title": "Httpbin Test API",
             "version": "1.0.0"
           },
@@ -434,7 +434,7 @@ get_or_create_api_key() {
                     }
                 },
                 "meta_data": {
-                    "description": "Test API key for PoC demonstration"
+                    "description": "Test API key for Install demonstration"
                 },
                 "is_inactive": false
             }')

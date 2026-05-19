@@ -1,4 +1,4 @@
-# Tyk Self-Managed Docker PoC - Quick Guide
+# Tyk Self-Managed Docker Install - Quick Guide
 
 ## Prerequisites
 
@@ -72,14 +72,14 @@ You have two options for bootstrapping:
 
 #### Option A: Automated Bootstrap (Recommended)
 
-Use the Bootstrap Utility for automated setup. See **[Bootstrap Utility README](https://github.com/TykTechnologies/tyk-pocs/blob/main/utils/bootstrap/README.md)** for complete instructions.
+Use the Bootstrap Utility for automated setup. See **[Bootstrap Utility README](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md)** for complete instructions.
 
 **Quick start:**
 
 ```bash
 # Clone full repo (if you only have this folder)
-git clone https://github.com/TykTechnologies/tyk-pocs.git
-cd tyk-pocs/utils/bootstrap
+git clone https://github.com/TykTechnologies/tyk-Install.git
+cd tyk-Install/utils/bootstrap
 
 # You will need to set env vars before running. Check the Bootstrap README
 # Run the bootstrap script docker tools profile
@@ -164,7 +164,7 @@ curl http://localhost:8080/httpbin/get -H "Authorization: <your-api-key>"
 
 ## Phase 4: Bootstrap Process (Manual)
 
-> **Note:** If you used the [Bootstrap Utility](https://github.com/TykTechnologies/tyk-pocs/blob/main/utils/bootstrap/README.md), skip to [Phase 5](#phase-5-first-api-test). The utility handles all steps below automatically.
+> **Note:** If you used the [Bootstrap Utility](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md), skip to [Phase 5](#phase-5-first-api-test). The utility handles all steps below automatically.
 
 If you prefer manual setup:
 
@@ -291,7 +291,7 @@ curl http://localhost:8080/test-api/get -H "Authorization: <your-key>"
 
 ## Phase 6: Developer Portal
 
-> **Note:** If you used the [Bootstrap Utility](https://github.com/TykTechnologies/tyk-pocs/blob/main/utils/bootstrap/README.md), Portal is already configured. Skip to Step 2.
+> **Note:** If you used the [Bootstrap Utility](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md), Portal is already configured. Skip to Step 2.
 
 ### Step 1: Configure Portal Provider
 
@@ -401,7 +401,7 @@ docker-compose down -v --remove-orphans
 docker network prune -f
 ```
 
-**If using the full repo with Bootstrap Utility:** See [Bootstrap Utility - Cleanup](https://github.com/TykTechnologies/tyk-pocs/blob/main/utils/bootstrap/README.md#-cleanup) for removing bootstrap data and allowing fresh re-bootstrap.
+**If using the full repo with Bootstrap Utility:** See [Bootstrap Utility - Cleanup](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md#-cleanup) for removing bootstrap data and allowing fresh re-bootstrap.
 
 ---
 
