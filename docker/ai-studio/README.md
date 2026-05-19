@@ -2,10 +2,8 @@
 
 ## Prerequisites
 
-- Docker Engine 24.0+ installed
-- Docker Compose v2.20+ installed
+- Docker installed
 - OpenSSL installed for local TLS certificate generation
-- 4GB+ RAM available
 
 ---
 
