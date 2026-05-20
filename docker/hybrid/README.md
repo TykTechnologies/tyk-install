@@ -259,7 +259,7 @@ docker network prune -f
 Update versions in `.env`:
 
 ```bash
-GATEWAY_VERSION=v5.12.1
+GATEWAY_VERSION=v5.13.0
 PUMP_VERSION=v1.14.1
 ```
 
