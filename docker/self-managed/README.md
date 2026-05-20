@@ -218,7 +218,7 @@ The portal image supports a `--bootstrap` CLI flag that runs bootstrap on first 
 
 ```yaml
 tyk-portal:
-  image: tykio/portal:${PORTAL_VERSION:-v1.17.1}
+  image: tykio/portal:${PORTAL_VERSION:-v1.17.2}
   command:
     - "--bootstrap"
     - "--user=portal-admin@example.com"
@@ -410,10 +410,10 @@ docker network prune -f
 Update versions in `.env`, use the latest versions:
 
 ```bash
-DASHBOARD_VERSION=v5.12.1
-GATEWAY_VERSION=v5.12.1
+DASHBOARD_VERSION=v5.13.0
+GATEWAY_VERSION=v5.13.0
 PUMP_VERSION=v1.14.1
-PORTAL_VERSION=v1.17.1
+PORTAL_VERSION=v1.17.2
 ```
 
 ---

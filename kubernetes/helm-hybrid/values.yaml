@@ -52,7 +52,7 @@ tyk-gateway:
   gateway:
     image:
       repository: tykio/tyk-gateway-ee
-      tag: v5.12.1
+      tag: v5.13.0
       pullPolicy: IfNotPresent
 
     # Internal hostname identifier
