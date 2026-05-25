@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'docker/self-managed/confs/**'
+      - 'docker/self-managed/**'
   workflow_dispatch:
 
 jobs:
