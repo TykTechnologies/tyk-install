@@ -205,6 +205,25 @@ tyk-gateway:
       externalTrafficPolicy: Local
       # annotations: {}
 
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
 # PUMP (Optional but recommended)
 tyk-pump:
   pump:
@@ -223,3 +242,22 @@ tyk-pump:
       enableAggregateAnalytics: false
 
     purgeDelay: 2
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL

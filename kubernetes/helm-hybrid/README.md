@@ -164,7 +164,7 @@ kubectl get pods -n tyk-dp -w
 
 ### 6. Access Services
 
-There are three ways to access your Tyk Gateway, ordered from quickest to most production-ready:
+There are four ways to access your Tyk Gateway, ordered from quickest to most production-ready:
 
 #### Option 1: LoadBalancer Service (Quickest for Cloud Deployments)
 
@@ -392,6 +392,30 @@ ingress:
 ```
 
 **Test Gateway** at `gateway.yourdomain.com/hello`
+
+---
+
+#### Option 4: OpenShift Routes (RedHat OpenShift)
+
+OpenShift uses Routes rather than Ingress or LoadBalancer for external access. Routes are created using the `oc` CLI and are automatically assigned a hostname under your cluster's `*.apps` domain.
+
+> **For local testing on OpenShift Local (CRC), port-forwarding (Option 2) is recommended** as it avoids DNS configuration.
+
+**Expose the Gateway via a Route:**
+
+```bash
+# Expose Gateway
+oc expose svc gateway-svc-tyk-dp-tyk-gateway -n tyk-dp --port=8080
+
+# Get the assigned Route URL
+oc get routes -n tyk-dp
+```
+
+The Gateway Route will be available at a URL such as:
+
+```text
+http://gateway-svc-tyk-dp-tyk-gateway-tyk-dp.apps.<cluster-domain>
+```
 
 ---
 

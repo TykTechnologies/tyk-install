@@ -37,7 +37,7 @@ global:
     bootstrap: true
     pump: true
     devPortal: true
-    operator: true
+    operator: true # Cluster admin rights required to install Operator (installs CRDs)
 
   servicePorts:
     dashboard: 3000
@@ -244,6 +244,25 @@ tyk-gateway:
       type: LoadBalancer
       externalTrafficPolicy: Local
 
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
 # ============================================================================
 # DASHBOARD CONFIGURATION
 # ============================================================================
@@ -373,6 +392,25 @@ tyk-dashboard:
       # Cloud-specific annotations
       # annotations: {}
 
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
   tib: # Enables SSO integration
     enabled: true
 
@@ -407,6 +445,25 @@ tyk-pump:
       #   value: "true" # PROD/PERFORMANCE: Enable table sharding
       # - name: TYK_PMP_UPTIMEPUMPCONFIG_TABLESHARDING
       #   value: "true" # PROD/PERFORMANCE: Enable table sharding
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
 
 # ============================================================================
 # DEVELOPER PORTAL CONFIGURATION
@@ -492,6 +549,25 @@ tyk-dev-portal:
     type: LoadBalancer
     port: 3001
 
+  # -------------------------------------------------------------------------
+  # Required for deploying on RedHat OpenShift
+  # -------------------------------------------------------------------------
+  # securityContext:
+  #   runAsUser: null
+  #   fsGroup: null
+  #   runAsNonRoot: true
+  # containerSecurityContext:
+  #   runAsNonRoot: true
+  #   runAsUser: null
+  #   allowPrivilegeEscalation: false
+  #   privileged: false
+  #   readOnlyRootFilesystem: true
+  #   seccompProfile:
+  #     type: RuntimeDefault
+  #   capabilities:
+  #     drop:
+  #       - ALL
+
 # ============================================================================
 # BOOTSTRAP CONFIGURATION
 # ============================================================================
@@ -503,3 +579,22 @@ tyk-bootstrap:
 
     org:
       name: "Install Organization"
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL

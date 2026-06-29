@@ -110,6 +110,11 @@ helm install tyk-postgres bitnami/postgresql \
   --set primary.initdb.scripts."init\.sql"="CREATE DATABASE portal;" \
   --set primary.persistence.size=20Gi \
   --version 12.12.10
+  # Required for installing on RedHat OpenShift - add the following flags:
+  # --set primary.podSecurityContext.runAsUser=null \
+  # --set primary.podSecurityContext.fsGroup=null \
+  # --set primary.containerSecurityContext.runAsUser=null \
+  # --set volumePermissions.enabled=false
 
 # Install Redis
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
@@ -123,6 +128,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n t
 kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n tyk
 
 # Install cert-manager (required for Tyk Operator)
+# Cluster admin privileges required for installing on RedHat OpenShift
 helm install \
   cert-manager oci://quay.io/jetstack/charts/cert-manager \
   --version v1.17.4 \
@@ -164,7 +170,7 @@ kubectl get pods -n tyk -w
 
 ### 6. Access Services
 
-There are three ways to access your Tyk services, ordered from quickest to most production-ready:
+There are four ways to access your Tyk services, ordered from quickest to most production-ready:
 
 #### Option 1: LoadBalancer Service (Quickest for Cloud Deployments)
 
@@ -479,6 +485,34 @@ tyk-dashboard:
             - dashboard.yourdomain.com
 
 # Portal (similar configuration)
+```
+
+---
+
+#### Option 4: OpenShift Routes (RedHat OpenShift)
+
+OpenShift uses Routes rather than Ingress or LoadBalancer for external access. Routes are created using the `oc` CLI and are automatically assigned a hostname under your cluster's `*.apps` domain.
+
+> **For local testing on OpenShift Local (CRC), port-forwarding (Option 2) is recommended** as it avoids DNS configuration.
+
+**Expose services via Routes:**
+
+```bash
+# Expose Dashboard, Gateway, and Portal
+oc expose svc dashboard-svc-tyk-tyk-dashboard -n tyk --port=3000
+oc expose svc gateway-svc-tyk-tyk-gateway -n tyk --port=8080
+oc expose svc dev-portal-svc-tyk-tyk-dev-portal -n tyk --port=3001
+
+# Get the assigned Route URLs
+oc get routes -n tyk
+```
+
+Routes will be available at URLs such as:
+
+```text
+http://dashboard-svc-tyk-tyk-dashboard-tyk.apps.<cluster-domain>
+http://gateway-svc-tyk-tyk-gateway-tyk.apps.<cluster-domain>
+http://dev-portal-svc-tyk-tyk-dev-portal-tyk.apps.<cluster-domain>
 ```
 
 ---
