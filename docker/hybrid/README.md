@@ -66,9 +66,7 @@ Edit `confs/pump.env` with the same credentials:
 ```bash
 # REQUIRED: Set these values (same as gateway)
 TYK_PMP_PUMPS_HYBRID_META_CONNECTIONSTRING=your-mdcb.cloud-ara.tyk.io:443
-TYK_PMP_PUMPS_HYBRID_META_RPCKEY=your-org-id
 TYK_PMP_PUMPS_HYBRID_META_APIKEY=your-dashboard-api-key
-TYK_PMP_PUMPS_HYBRID_META_GROUPID=your-group-id
 ```
 
 ---
@@ -187,11 +185,7 @@ curl http://localhost:8080/your-api-path/get
 | Variable                                     | Description                     |
 | -------------------------------------------- | ------------------------------- |
 | `TYK_PMP_PUMPS_HYBRID_META_CONNECTIONSTRING` | MDCB endpoint (same as gateway) |
-| `TYK_PMP_PUMPS_HYBRID_META_RPCKEY`           | Organization ID                 |
 | `TYK_PMP_PUMPS_HYBRID_META_APIKEY`           | Dashboard User API Key          |
-| `TYK_PMP_PUMPS_HYBRID_META_GROUPID`          | Data plane cluster identifier   |
-
-### Secrets Management
 
 **Sensitive values in config files:**
 
