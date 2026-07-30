@@ -54,7 +54,7 @@ tyk-gateway:
   gateway:
     image:
       repository: tykio/tyk-gateway-ee
-      tag: v5.13.0
+      tag: v5.14.0
       pullPolicy: IfNotPresent
 
     # Internal hostname identifier
@@ -270,7 +270,7 @@ tyk-dashboard:
   dashboard:
     image:
       repository: tykio/tyk-dashboard
-      tag: v5.13.0
+      tag: v5.14.0
       pullPolicy: IfNotPresent
 
     hostName: tyk-dashboard.local
@@ -421,7 +421,7 @@ tyk-pump:
   pump:
     image:
       repository: tykio/tyk-pump-docker-pub
-      tag: v1.14.1
+      tag: v1.16.0
       pullPolicy: IfNotPresent
 
     replicaCount: 1
@@ -473,7 +473,7 @@ tyk-dev-portal:
 
   image:
     repository: tykio/portal
-    tag: v1.17.2
+    tag: v1.18.0
     pullPolicy: IfNotPresent
 
   hostName: tyk-dev-portal.local
