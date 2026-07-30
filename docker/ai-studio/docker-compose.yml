@@ -1,7 +1,7 @@
 services:
   tyk-ai-studio:
     restart: unless-stopped
-    image: tykio/tyk-ai-studio:${AI_STUDIO_VERSION:-v2.1.0-rc-1}
+    image: tykio/tyk-ai-studio:${AI_STUDIO_VERSION:-v2.1.0}
     container_name: tyk-ai-studio
     ports:
       - "4000:8080"
@@ -23,7 +23,7 @@ services:
 
   microgateway:
     restart: unless-stopped
-    image: tykio/tyk-microgateway:${MICROGATEWAY_VERSION:-v2.1.0-rc-1}
+    image: tykio/tyk-microgateway:${MICROGATEWAY_VERSION:-v2.1.0}
     container_name: tyk-ai-microgateway
     ports:
       - "9091:8080"
