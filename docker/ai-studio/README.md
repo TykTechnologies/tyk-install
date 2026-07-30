@@ -180,31 +180,6 @@ Common issues:
 1. `EDGE_AUTH_TOKEN` does not match `GRPC_AUTH_TOKEN`
 2. `ENCRYPTION_KEY` does not match `MICROGATEWAY_ENCRYPTION_KEY`
 3. AI Studio did not start successfully because TLS files are missing
-4. Existing Postgres volume was created before `utils/dbs.sql` added Microgateway compatibility domains
-
-If Microgateway fails with `type "blob" does not exist`, add the compatibility domains to the existing Microgateway database and restart Microgateway:
-
-```bash
-docker-compose exec -T postgres psql -U tykuser -d tyk_ai_microgateway <<'SQL'
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'blob') THEN
-    CREATE DOMAIN blob AS bytea;
-  END IF;
-END
-$$;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'string') THEN
-    CREATE DOMAIN string AS text;
-  END IF;
-END
-$$;
-SQL
-
-docker-compose restart microgateway
-```
 
 For disposable local PoCs, you can also recreate the Postgres volume so the init script runs again:
 
@@ -212,6 +187,8 @@ For disposable local PoCs, you can also recreate the Postgres volume so the init
 docker-compose down -v
 docker-compose up -d
 ```
+
+> **Note:** Microgateway versions before `v2.1.0` required `blob`/`string` compatibility domains in the Microgateway database (`type "blob" does not exist` at startup). Since `v2.1.0` the migrations use native PostgreSQL types and no schema workaround is needed.
 
 ### Registration Returns 400
 
