@@ -110,7 +110,7 @@ tyk-gateway:
       - name: TYK_GW_STORAGE_MAXACTIVE
         value: "5000"
       - name: TYK_GW_CACHESTORAGE_MAXACTIVE
-        value: "2000" # PPROD/PERFORMANCE: Set to a higher value if you are expecting more traffic.
+        value: "2000" # PROD/PERFORMANCE: Set to a higher value if you are expecting more traffic.
       # - name: TYK_GW_STORAGE_SSLINSECURESKIPVERIFY
       #   value: "false" # PROD: Keep false to validate Redis SSL certificates
       # - name: TYK_GW_STORAGE_TIMEOUT

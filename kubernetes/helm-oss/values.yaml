@@ -1,0 +1,178 @@
+# ============================================================================
+# TYK OSS (OPEN SOURCE) HELM VALUES
+# ============================================================================
+# For the tyk-helm/tyk-oss chart. Deploys the open source Gateway only:
+# no Dashboard, no licence, no PostgreSQL.
+#
+# comments describing PRODUCTION and PERFORMANCE tuning recommendations.
+# Default values are set for DEVELOPMENT environments.
+# ============================================================================
+
+# OSS has no concept of an organisation. This value is only needed so features
+# that expect an org ID (such as Basic Auth keys) work; any stable string is fine.
+operatorSecret:
+  enabled: false
+  orgID: "orgid"
+
+global:
+  components:
+    # OSS has no Dashboard to render analytics, so Pump only earns its keep once
+    # it is pointed at a sink you actually read.
+    pump: false
+    # Requires cert-manager to be installed first, and an Operator licence.
+    operator: false
+
+  servicePorts:
+    gateway: 8080
+
+  tls:
+    gateway: false # PROD: Set to true and provide your own certificate to terminate TLS at the gateway
+    useDefaultTykCertificate: true # PROD: Set to false when supplying your own certificate, so yours is not overwritten
+
+  secrets:
+    # SECURITY: Change to a strong 32+ character string for production - this is the Gateway API credential
+    APISecret: CHANGEME
+    # SECURITY: Prefer an externally managed Kubernetes secret over a plaintext value in this file
+    useSecretName: ""
+
+  redis:
+    # Redis is required even in OSS: it holds keys, quotas, and rate-limit counters.
+    # Not installed by this chart - see the README for the Bitnami commands.
+    #
+    # IMPORTANT: this hostname includes the namespace. It assumes Redis is the
+    # bitnami chart released as `tyk-redis` in namespace `tyk`, matching the
+    # README. Installing into a different namespace without changing this leaves
+    # the gateway up but reporting redis "fail" in /hello, and no keys, quotas,
+    # or rate limits will work.
+    addrs:
+      - tyk-redis-master.tyk.svc:6379
+    # pass: "" # SECURITY: Set a Redis password for any deployment that is not a local throwaway
+    # passSecret:
+    #   name: ""
+    #   keyName: ""
+    # useSSL: true # PROD: Enable TLS for Redis connections
+    # sslInsecureSkipVerify: false # PROD: Keep false to validate Redis TLS certificates
+    # enableCluster: true # PROD/PERFORMANCE: Use Redis Cluster for high availability and performance
+    storage:
+      database: 0
+    maxIdle: 1000 # PROD/PERFORMANCE: Raise for high-throughput scenarios; too low shows up as latency with idle CPU
+
+  hashKeys: true
+  oasValidateExamples: false
+  oasValidateSchemaDefaults: false
+
+tyk-gateway:
+  gateway:
+    # Pin the image. The chart's own default tag trails this repository's pinned
+    # version (the chart shipped v5.9.1 at the time of writing), and an unpinned
+    # chart silently changes version on `helm repo update`.
+    #
+    # Note the nesting: this is tyk-gateway.gateway.image, NOT tyk-gateway.image.
+    # Helm ignores unknown keys without warning, so a misplaced override leaves
+    # the chart default in place and looks like it worked.
+    image:
+      repository: docker.tyk.io/tyk-gateway/tyk-gateway
+      tag: v5.14.0
+      pullPolicy: IfNotPresent
+
+    hostName: tyk-gw.local
+    kind: Deployment
+
+    # PROD: Run at least two replicas behind a load balancer. Gateways are
+    # stateless - all state lives in Redis - so this is purely a matter of count.
+    replicaCount: 1
+
+    enableFixedWindowRateLimiter: false
+
+    tls:
+      secretName: tyk-default-tls-secret
+      insecureSkipVerify: false # PROD: Keep false to validate TLS certificates
+
+    service:
+      type: ClusterIP # PROD: Use LoadBalancer or an Ingress rather than port-forwarding
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
+    # PROD: Always set requests and limits. Without requests the scheduler cannot
+    # place pods sensibly; without limits one Gateway can starve its neighbours.
+    # Derive the numbers from measurement - see tyk-production-readiness sizing guidance.
+    resources: {}
+    #   requests:
+    #     cpu: 200m
+    #     memory: 256Mi
+    #   limits:
+    #     cpu: 1000m
+    #     memory: 512Mi
+
+    extraEnvs:
+      # ===== CONFIGURATION SOURCE =====
+      # OSS reads API definitions from disk, not from a Dashboard. Mount them and
+      # point TYK_GW_APPPATH at the mount.
+      - name: TYK_GW_USEDBAPPCONFIGS
+        value: "false"
+
+      # ===== LOGGING =====
+      - name: TYK_GW_LOGLEVEL
+        value: "info" # PROD: Set to "error" to reduce log volume
+
+      # ===== ANALYTICS =====
+      # Off by default: with no Dashboard, records accumulate in Redis and expire
+      # unless Pump drains them to a sink you read.
+      - name: TYK_GW_ENABLEANALYTICS
+        value: "false"
+      # - name: TYK_GW_ANALYTICSCONFIG_ENABLEDETAILEDRECORDING
+      #   value: "false" # PROD: Keep false - stores full request/response bodies, very expensive and may capture sensitive payloads
+      # - name: TYK_GW_ENABLESEPERATEANALYTICSSTORE
+      #   value: "true" # PROD/PERFORMANCE: Use a dedicated Redis for analytics so it stops competing with the request path
+
+      # ===== HTTP SERVER =====
+      # - name: TYK_GW_HTTPSERVEROPTIONS_READTIMEOUT
+      #   value: "30" # PROD: Set a reasonable timeout to prevent resource exhaustion
+      # - name: TYK_GW_HTTPSERVEROPTIONS_WRITETIMEOUT
+      #   value: "30" # PROD: Set a reasonable timeout to prevent resource exhaustion
+      # - name: TYK_GW_HTTPSERVEROPTIONS_MAXREQUESTBODYSIZE
+      #   value: "" # PROD: Set max request body size in bytes to prevent memory exhaustion
+
+      # ===== PERFORMANCE TUNING =====
+      # - name: TYK_GW_MAXIDLECONNSPERHOST
+      #   value: "10000" # PROD/PERFORMANCE: Set high value (>=10000) for high-throughput scenarios
+      # - name: TYK_GW_PROXYCLOSECONNECTIONS
+      #   value: "false" # PROD/PERFORMANCE: Keep false to reuse upstream connections (keep-alive)
+      # - name: TYK_GW_DRLTHRESHOLD
+      #   value: "-1" # PROD/PERFORMANCE: Set to -1 to use DRL and disable fallback to hard-rate limit sync
+      # - name: TYK_GW_ENABLEJSVM
+      #   value: "false" # PROD/PERFORMANCE: Disable the JavaScript VM when no JS middleware is used
+
+    # PROD: Isolate the Gateway management API from API traffic. By default /tyk/
+    # is served on the same port as your APIs.
+    # https://tyk.io/docs/planning-for-production#change-your-control-port
+    # control:
+    #   enabled: true
+    #   port: 9696
+    #   containerPort: 9696
+
+    ingress:
+      enabled: false # PROD: Enable and terminate TLS here, or use an OpenShift Route
+      # className: nginx
+      # hosts:
+      #   - host: gateway.example.com
+      #     paths:
+      #       - path: /
+      #         pathType: Prefix

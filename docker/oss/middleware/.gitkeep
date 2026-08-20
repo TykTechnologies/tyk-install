@@ -1,0 +1,3 @@
+# Custom JavaScript middleware goes here, mounted read-only at
+# /opt/tyk-gateway/middleware. Referenced from an API definition's
+# custom_middleware block. See https://tyk.io/docs/api-management/plugins/

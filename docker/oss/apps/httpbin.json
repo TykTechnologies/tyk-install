@@ -1,0 +1,24 @@
+{
+  "api_id": "httpbin",
+  "org_id": "default",
+  "name": "Httpbin",
+  "active": true,
+  "use_keyless": true,
+  "enable_context_vars": true,
+  "proxy": {
+    "listen_path": "/httpbin/",
+    "target_url": "http://httpbin:8080",
+    "strip_listen_path": true
+  },
+  "version_data": {
+    "not_versioned": true,
+    "default_version": "Default",
+    "versions": {
+      "Default": {
+        "name": "Default",
+        "use_extended_paths": true,
+        "extended_paths": {}
+      }
+    }
+  }
+}

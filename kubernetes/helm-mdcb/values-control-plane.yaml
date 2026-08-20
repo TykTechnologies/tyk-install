@@ -1,0 +1,221 @@
+# ============================================================================
+# TYK MDCB CONTROL PLANE HELM VALUES
+# ============================================================================
+# For the tyk-helm/tyk-control-plane chart. Deploys the Dashboard, MDCB, a
+# control-plane Gateway, Pump, and the bootstrap job. Data planes connect to
+# MDCB over RPC and are deployed separately with values-data-plane.yaml.
+#
+# comments describing PRODUCTION and PERFORMANCE tuning recommendations.
+# Default values are set for DEVELOPMENT environments.
+#
+# Redis and PostgreSQL are NOT installed by this chart. See the README.
+# ============================================================================
+
+global:
+  license:
+    # SECURITY: Prefer global.secrets.useSecretName over a plaintext licence here.
+    dashboard: ""
+
+  secrets:
+    # SECURITY: Change to a strong 32+ character string - this is the Gateway API credential
+    APISecret: CHANGEME
+    # SECURITY: Supply DashLicense and MDCBLicense via an externally managed secret
+    # rather than in this file. Create it before installing:
+    #   kubectl create secret generic tyk-conf -n tyk \
+    #     --from-literal=APISecret=... --from-literal=DashLicense=...
+    useSecretName: ""
+
+  adminUser:
+    # SECURITY: Change both. These are the initial Dashboard admin credentials.
+    email: admin@example.local
+    password: ""
+
+  components:
+    pump: true
+    bootstrap: true
+    operator: false # Requires cert-manager and an Operator licence
+
+  tls:
+    dashboard: false # PROD: Set to true and provide a certificate
+    gateway: false # PROD: Set to true and provide a certificate
+    useDefaultTykCertificate: true # PROD: Set to false when supplying your own certificate
+
+  redis:
+    # Shared by the Dashboard, MDCB, and the control-plane Gateway.
+    addrs:
+      - tyk-redis-master.tyk.svc:6379
+    # pass: "" # SECURITY: Set a Redis password for any deployment that is not a local throwaway
+    # useSSL: true # PROD: Enable TLS for Redis connections
+    # sslInsecureSkipVerify: false # PROD: Keep false to validate Redis TLS certificates
+    # enableCluster: true # PROD/PERFORMANCE: Use Redis Cluster for high availability and performance
+    storage:
+      database: 0
+
+  postgres:
+    host: tyk-postgres-postgresql.tyk.svc
+    port: 5432
+    user: tykuser
+    password: "" # SECURITY: Set via a Kubernetes secret, not here
+    database: tyk_analytics
+    sslmode: disable # PROD: Set to "require" so config and analytics do not cross the network in clear text
+
+  mdcbSynchronizer:
+    # PROD: Enable so each data plane keeps a local keyspace copy and keeps
+    # serving traffic through a control-plane outage. This is the main reason to
+    # run MDCB rather than plain Self-Managed, so leaving it off is usually wrong.
+    enabled: false
+    keySpaceSyncInterval: 10
+
+tyk-mdcb:
+  mdcb:
+    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # unpinned chart can change version on `helm repo update`.
+    image:
+      repository: tykio/tyk-mdcb-docker
+      tag: v2.12.0
+
+    # SECURITY: Supply via global.secrets.useSecretName (key MDCBLicense) rather than here
+    license: ""
+
+    # PROD: At least two replicas. Every data plane depends on MDCB being
+    # reachable to pick up configuration changes.
+    replicaCount: 1
+
+    service:
+      type: ClusterIP # PROD: Data planes are usually outside this cluster - expose via LoadBalancer or an Ingress that supports gRPC
+      port: 9091
+
+    # PROD: Always set requests and limits; size from the number of connected data planes.
+    resources: {}
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
+tyk-dashboard:
+  dashboard:
+    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # unpinned chart can change version on `helm repo update`.
+    image:
+      repository: tykio/tyk-dashboard
+      tag: v5.14.0
+
+    replicaCount: 1 # PROD: Two or more. The Dashboard serves operators, not request traffic, so it does not scale with RPS.
+    resources: {}
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
+    extraEnvs:
+      - name: TYK_DB_LOGLEVEL
+        value: "info" # PROD: Set to "error" to reduce log volume
+      # - name: TYK_DB_ENABLEDUPLICATESLUGS
+      #   value: "true" # Allows duplicate API slugs across different APIs
+
+tyk-gateway:
+  gateway:
+    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # unpinned chart can change version on `helm repo update`.
+    image:
+      repository: tykio/tyk-gateway-ee
+      tag: v5.14.0
+
+    replicaCount: 1 # PROD: Two or more behind a load balancer; gateways are stateless
+    resources: {}
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
+    extraEnvs:
+      - name: TYK_GW_LOGLEVEL
+        value: "info" # PROD: Set to "error" to reduce log volume
+      # - name: TYK_GW_ANALYTICSCONFIG_ENABLEDETAILEDRECORDING
+      #   value: "false" # PROD: Keep false - stores full bodies, expensive and may capture sensitive payloads
+      # - name: TYK_GW_ENABLESEPERATEANALYTICSSTORE
+      #   value: "true" # PROD/PERFORMANCE: Use a dedicated Redis for analytics so it stops competing with the request path
+      # - name: TYK_GW_MAXIDLECONNSPERHOST
+      #   value: "10000" # PROD/PERFORMANCE: Set high value (>=10000) for high-throughput scenarios
+
+tyk-pump:
+  pump:
+    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # unpinned chart can change version on `helm repo update`.
+    image:
+      repository: tykio/tyk-pump-docker-pub
+      tag: v1.16.0
+
+    replicaCount: 1
+    resources: {}
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
+    extraEnvs:
+      # MDCB forwards analytics from every data plane to this Pump.
+      - name: TYK_PMP_LOGLEVEL
+        value: "info" # PROD: Set to "error" to reduce log volume
+      # - name: TYK_PMP_PURGEDELAY
+      #   value: "1" # PROD/PERFORMANCE: Lower for fresher data; if Pump falls behind, records expire in Redis and analytics under-report
