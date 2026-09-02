@@ -38,7 +38,7 @@ services:
 
   tyk-dashboard:
     restart: unless-stopped
-    image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.14.0}
+    image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.15.0}
     container_name: tyk-dashboard
     ports:
       - "3000:3000"
@@ -56,7 +56,7 @@ services:
 
   tyk-gateway:
     restart: unless-stopped
-    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.14.0}
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.15.0}
     container_name: tyk-gateway
     ports:
       - "8080:8080"
@@ -73,7 +73,7 @@ services:
 
   tyk-pump:
     restart: unless-stopped
-    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.16.0}
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.17.0}
     container_name: tyk-pump
     env_file:
       - ./confs/pump.env
