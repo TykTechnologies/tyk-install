@@ -32,6 +32,9 @@ Choose your deployment:
 | **Hybrid**       | Data plane using `tyk-data-plane` chart | [README](./kubernetes/helm-hybrid/)         |
 | **Operator**     | Standalone Tyk Operator                 | [README](./kubernetes/standalone-operator/) |
 
+Self-Managed and Hybrid both run on Red Hat OpenShift from tyk-charts 5.4.0 by layering their
+`values-openshift.yaml` overlay. See each guide's "Deploying on Red Hat OpenShift" section.
+
 ## Utilities
 
 ### Bootstrap Utility

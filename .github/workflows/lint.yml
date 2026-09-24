@@ -20,7 +20,7 @@ jobs:
         run: |
           yamllint -d "{extends: relaxed, rules: {line-length: disable, truthy: disable}}" \
             docker/*/docker-compose.yml \
-            kubernetes/*/values.yaml
+            kubernetes/*/values*.yaml
 
   shellcheck:
     name: Shell Script Lint
