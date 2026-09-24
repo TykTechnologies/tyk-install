@@ -681,10 +681,6 @@ oc get pods -n tyk -o custom-columns='NAME:.metadata.name,SCC:.metadata.annotati
   enabled, it takes `runAsUser` from `gateway.containerSecurityContext`, then
   `gateway.securityContext`, then `65532`. With the other two disabled it lands on `65532`, which
   `restricted-v2` rejects.
-- **`helm test`.** The overlay disables the test pod's security contexts, which otherwise pin
-  `runAsUser: 1000`. Separately, the `tyk-stack` test pod only finds the gateway when the release
-  name contains `tyk-stack` (a known chart issue on every platform), so with the release name `tyk`
-  used in this guide `helm test` fails even though the stack is healthy.
 
 ---
 

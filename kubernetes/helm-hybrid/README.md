@@ -589,8 +589,6 @@ oc get pods -n tyk-dp -o custom-columns='NAME:.metadata.name,SCC:.metadata.annot
   enabled, it takes `runAsUser` from `gateway.containerSecurityContext`, then
   `gateway.securityContext`, then `65532`. With the other two disabled it lands on `65532`, which
   `restricted-v2` rejects.
-- **`helm test`.** The overlay disables the test pod's security contexts, which otherwise pin
-  `runAsUser: 1000`.
 
 ---
 
