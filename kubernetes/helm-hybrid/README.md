@@ -563,7 +563,7 @@ Run the Quick Start steps with these changes:
 | 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
 | 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | 8 | The operator and cert-manager need cluster-admin. |
-| Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down (see [upgrading](#things-to-know)). |
+| Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
 
 ### Install
 
@@ -589,20 +589,6 @@ oc get pods -n tyk-dp -o custom-columns='NAME:.metadata.name,SCC:.metadata.annot
   enabled, it takes `runAsUser` from `gateway.containerSecurityContext`, then
   `gateway.securityContext`, then `65532`. With the other two disabled it lands on `65532`, which
   `restricted-v2` rejects.
-- **Upgrading from the pre-5.4.0 OpenShift settings takes the gateway down unless you switch
-  first.** Earlier versions of this guide used `runAsUser: null` / `fsGroup: null`. They work on
-  5.3.0, but on 5.4.0 they leave the gateway's init container pinned to UID 65532, and every new
-  gateway pod is rejected:
-
-  ```text
-  pods "gateway-tyk-dp-tyk-gateway-..." is forbidden: unable to validate against any security context constraint:
-  [... provider restricted-v2: .initContainers[0].runAsUser: Invalid value: 65532: must be in the ranges: [<namespace range>] ...]
-  ```
-
-  The gateway's rollout strategy allows one unavailable pod, so with one replica the running gateway
-  is removed before its rejected replacement can start: all API traffic returns `503`, while
-  `helm upgrade` still reports `STATUS: deployed`. Upgrade with `values-openshift.yaml` in place of
-  the old blocks. If you have already hit this, running that upgrade restores the gateway.
 - **`helm test`.** The overlay disables the test pod's security contexts, which otherwise pin
   `runAsUser: 1000`.
 

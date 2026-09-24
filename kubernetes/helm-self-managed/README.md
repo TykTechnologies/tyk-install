@@ -655,7 +655,7 @@ Run the Quick Start steps with these changes:
 | 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator and cert-manager need cluster-admin; without it, skip cert-manager and install with `--set global.components.operator=false`. |
 | 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
 | 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
-| Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down (see [upgrading](#things-to-know)). |
+| Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
 
 ### Install
 
@@ -681,21 +681,6 @@ oc get pods -n tyk -o custom-columns='NAME:.metadata.name,SCC:.metadata.annotati
   enabled, it takes `runAsUser` from `gateway.containerSecurityContext`, then
   `gateway.securityContext`, then `65532`. With the other two disabled it lands on `65532`, which
   `restricted-v2` rejects.
-- **Upgrading from the pre-5.4.0 OpenShift settings takes the gateway down unless you switch
-  first.** Earlier versions of this guide used `runAsUser: null` / `fsGroup: null`. They work on
-  5.3.0, but on 5.4.0 they leave the gateway's init container pinned to UID 65532, and every new
-  gateway pod is rejected:
-
-  ```text
-  pods "gateway-tyk-tyk-gateway-..." is forbidden: unable to validate against any security context constraint:
-  [... provider restricted-v2: .initContainers[0].runAsUser: Invalid value: 65532: must be in the ranges: [<namespace range>] ...]
-  ```
-
-  The gateway's rollout strategy allows one unavailable pod, so with one replica the running gateway
-  is removed before its rejected replacement can start: all API traffic returns `503`, while
-  `helm upgrade` still reports `STATUS: deployed`. Upgrade with `values-openshift.yaml` in place of
-  the old blocks. If you have already hit this, running that upgrade restores the gateway; APIs and
-  keys are kept.
 - **`helm test`.** The overlay disables the test pod's security contexts, which otherwise pin
   `runAsUser: 1000`. Separately, the `tyk-stack` test pod only finds the gateway when the release
   name contains `tyk-stack` (a known chart issue on every platform), so with the release name `tyk`

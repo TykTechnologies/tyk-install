@@ -12,10 +12,7 @@
 # the namespace's allocated range.
 #
 # `enabled: false` is the only supported opt-out. Setting a block to `{}` does
-# not work (Helm deep-merges the chart defaults back in), and the `runAsUser:
-# null` / `fsGroup: null` approach used before 5.4.0 leaves the gateway's
-# setup-directories init container pinned to runAsUser 65532, which
-# restricted-v2 rejects.
+# not work (Helm deep-merges the chart defaults back in).
 #
 # The same settings appear as commented "Required for deploying on RedHat
 # OpenShift" blocks beside each component in values.yaml.

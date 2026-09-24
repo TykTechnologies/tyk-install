@@ -213,8 +213,7 @@ tyk-gateway:
 
     # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
     # Constraint assign UID/GID, or layer values-openshift.yaml. Use
-    # `enabled: false`: `{}` has no effect, and the pre-5.4.0 `runAsUser: null`
-    # form leaves the gateway init container pinned to UID 65532.
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
@@ -251,8 +250,7 @@ tyk-pump:
 
     # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
     # Constraint assign UID/GID, or layer values-openshift.yaml. Use
-    # `enabled: false`: `{}` has no effect, and the pre-5.4.0 `runAsUser: null`
-    # form leaves the gateway init container pinned to UID 65532.
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
