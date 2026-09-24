@@ -80,11 +80,6 @@ tyk-bootstrap:
     containerSecurityContext:
       enabled: false
 
-# tyk-operator (v1.5.0 in tyk-charts 5.4.0) needs no entry here: it pins no
-# UID, so restricted-v2 assigns one. Do NOT set tyk-operator.securityContext
-# to {enabled: false} - this operator chart has no `enabled` flag, so the key
-# is rendered verbatim and strict validation (kubectl, Argo CD, Flux) rejects
-# the Deployment with `unknown field ...securityContext.enabled`.
 # Installing the operator (and cert-manager) needs cluster-admin; where you
 # lack it, also set global.components.operator=false.
 

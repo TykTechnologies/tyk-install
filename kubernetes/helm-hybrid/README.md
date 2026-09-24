@@ -548,8 +548,7 @@ Create a sample API using Tyk Operator CRD to verify it's working. The operator 
 ## Deploying on Red Hat OpenShift
 
 tyk-charts 5.4.0 and later install on OpenShift without Kustomize patches. Every security context
-block in the Tyk component charts accepts `enabled: false` (the tyk-operator chart is the
-exception, see below), which omits the block from the manifest so OpenShift's Security Context
+block in the Tyk component charts accepts `enabled: false`, which omits the block from the manifest so OpenShift's Security Context
 Constraint (SCC), normally `restricted-v2`, assigns the UID and GID from the namespace's allocated
 range. [`values-openshift.yaml`](values-openshift.yaml) sets all of them and switches the gateway
 service to `ClusterIP`. The same security context settings are also commented beside each
@@ -604,10 +603,6 @@ oc get pods -n tyk-dp -o custom-columns='NAME:.metadata.name,SCC:.metadata.annot
   is removed before its rejected replacement can start: all API traffic returns `503`, while
   `helm upgrade` still reports `STATUS: deployed`. Upgrade with `values-openshift.yaml` in place of
   the old blocks. If you have already hit this, running that upgrade restores the gateway.
-- **Tyk Operator (step 8).** The `tyk-helm/tyk-operator` chart (v1.5.0) pins no UID and needs no
-  opt-out. Do not set `securityContext.enabled: false` on it: that chart has no `enabled` flag, so
-  the key is rendered verbatim and strict validation (`kubectl`, Argo CD, Flux) rejects the
-  Deployment with `unknown field "spec.template.spec.containers[0].securityContext.enabled"`.
 - **`helm test`.** The overlay disables the test pod's security contexts, which otherwise pin
   `runAsUser: 1000`.
 
