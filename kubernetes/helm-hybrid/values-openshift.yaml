@@ -1,0 +1,49 @@
+# ============================================================================
+# TYK HYBRID DATA PLANE - RED HAT OPENSHIFT OVERLAY (tyk-charts 5.4.0+)
+# ============================================================================
+# Layer this file on top of values.yaml:
+#
+#   helm install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+#     -f values.yaml -f values-openshift.yaml
+#
+# It turns every pod-level, container-level and init-container securityContext
+# block off with `enabled: false`, so the rendered manifests carry no UID/GID
+# and OpenShift's Security Context Constraint (restricted-v2) assigns them from
+# the namespace's allocated range.
+#
+# `enabled: false` is the only supported opt-out. Setting a block to `{}` does
+# not work (Helm deep-merges the chart defaults back in).
+#
+# The same settings appear as commented "Required for deploying on RedHat
+# OpenShift" blocks beside each component in values.yaml.
+# ============================================================================
+
+tyk-gateway:
+  gateway:
+    securityContext:
+      enabled: false
+    containerSecurityContext:
+      enabled: false
+    # All three gateway blocks must be off: left enabled, the init container's
+    # block falls back to UID 65532, which restricted-v2 rejects.
+    initContainers:
+      setupDirectories:
+        securityContext:
+          enabled: false
+    # OpenShift exposes services through Routes (see the README).
+    service:
+      type: ClusterIP
+
+tyk-pump:
+  pump:
+    securityContext:
+      enabled: false
+    containerSecurityContext:
+      enabled: false
+
+# `helm test` pod. Its default pins runAsUser 1000, which restricted-v2 rejects.
+tests:
+  securityContext:
+    enabled: false
+  containerSecurityContext:
+    enabled: false

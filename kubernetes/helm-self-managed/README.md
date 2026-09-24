@@ -7,6 +7,9 @@
 - Helm 3.12+ installed
 - Tyk license key
 
+> **Red Hat OpenShift?** Follow the steps below, with the changes described in
+> [Deploying on Red Hat OpenShift](#deploying-on-red-hat-openshift). It requires tyk-charts 5.4.0 or later.
+
 ---
 
 ## Quick Start
@@ -110,13 +113,17 @@ helm install tyk-postgres bitnami/postgresql \
   --set primary.initdb.scripts."init\.sql"="CREATE DATABASE portal;" \
   --set primary.persistence.size=20Gi \
   --version 12.12.10
-  # Required for installing on RedHat OpenShift - add the following flags:
+  # Required for installing on RedHat OpenShift - add " \" to the --version line
+  # above and append these flags (this chart version pins UID/fsGroup 1001,
+  # which restricted-v2 rejects):
   # --set primary.podSecurityContext.runAsUser=null \
   # --set primary.podSecurityContext.fsGroup=null \
   # --set primary.containerSecurityContext.runAsUser=null \
   # --set volumePermissions.enabled=false
 
 # Install Redis
+# On RedHat OpenShift no extra flags are needed: this chart version detects
+# OpenShift and drops its fixed UID/fsGroup so the SCC can assign them.
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
   --set image.repository=bitnamilegacy/redis \
   --namespace tyk \
@@ -150,6 +157,12 @@ helm repo update
 helm install tyk tyk-helm/tyk-stack \
   --namespace tyk \
   --values values.yaml
+
+# On RedHat OpenShift, layer the OpenShift overlay instead (tyk-charts 5.4.0+):
+# helm install tyk tyk-helm/tyk-stack --version 5.4.0 \
+#   --namespace tyk \
+#   --values values.yaml \
+#   --values values-openshift.yaml
 
 # Monitor installation and wait (~60 sec)
 kubectl get pods -n tyk -w
@@ -221,6 +234,9 @@ Credentials: See step 7 below
 #### Option 2: Port-Forward (Best for Local Testing)
 
 Quick access for local testing without external exposure.
+
+> **On OpenShift** skip to *Forward services and test*: `values-openshift.yaml` already sets every
+> service to `ClusterIP`, and upgrading with `values.yaml` alone would drop the overlay.
 
 **Update service types in values.yaml:**
 
@@ -515,6 +531,15 @@ http://gateway-svc-tyk-tyk-gateway-tyk.apps.<cluster-domain>
 http://dev-portal-svc-tyk-tyk-dev-portal-tyk.apps.<cluster-domain>
 ```
 
+**Or, instead of `oc expose`, HTTPS routes with edge termination** (these use the router's `*.apps`
+certificate, and plain HTTP redirects to HTTPS):
+
+```bash
+oc create route edge dashboard --service=dashboard-svc-tyk-tyk-dashboard --port=3000 --insecure-policy=Redirect -n tyk
+oc create route edge gateway --service=gateway-svc-tyk-tyk-gateway --port=8080 --insecure-policy=Redirect -n tyk
+oc create route edge portal --service=dev-portal-svc-tyk-tyk-dev-portal --port=3001 --insecure-policy=Redirect -n tyk
+```
+
 ---
 
 ### 7. Get Admin Credentials
@@ -536,8 +561,8 @@ kubectl get secret tyk-conf -n tyk -o jsonpath='{.data.adminUserPassword}' | bas
 ```bash
 # Login to Dashboard first to get your API key
 # Dashboard > Users > Your User > API Access Credentials
-# Or get the bootstrap-generated API key from bootstrap job logs:
-kubectl logs -n tyk -l app=bootstrap-tyk-tyk-bootstrap
+# Or read the admin user's API key stored by the bootstrap job:
+kubectl get secret tyk-operator-conf -n tyk -o jsonpath='{.data.TYK_AUTH}' | base64 -d && echo
 
 # Set your Dashboard API key
 DASH_API_KEY="your-dashboard-api-key-here"
@@ -609,6 +634,52 @@ curl $GATEWAY_URL/httpbin/get
 
 # Check Dashboard > Monitoring > Activity to see the request
 ```
+
+---
+
+## Deploying on Red Hat OpenShift
+
+tyk-charts 5.4.0 and later install on OpenShift without Kustomize patches. Every security context
+block in the Tyk component charts accepts `enabled: false`, which omits the block from the manifest
+so OpenShift's Security Context Constraint (SCC), normally `restricted-v2`, assigns the UID and GID
+from the namespace's allocated range. [`values-openshift.yaml`](values-openshift.yaml) sets all of
+them and switches every service to `ClusterIP`. The same security context settings are
+also commented beside each component in `values.yaml` under
+`Required for deploying on RedHat OpenShift`.
+
+Run the Quick Start steps with these changes:
+
+| Step | Change on OpenShift |
+| --- | --- |
+| 1 | `oc login` instead of the cloud CLI. |
+| 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator and cert-manager need cluster-admin; without it, skip cert-manager and install with `--set global.components.operator=false`. |
+| 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
+| 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
+| Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
+
+### Install
+
+```bash
+helm install tyk tyk-helm/tyk-stack --version 5.4.0 \
+  --namespace tyk \
+  --values values.yaml \
+  --values values-openshift.yaml \
+  --wait --timeout 15m
+```
+
+Verify that every pod was admitted under `restricted-v2` with a UID from the namespace range:
+
+```bash
+oc get pods -n tyk -o custom-columns='NAME:.metadata.name,SCC:.metadata.annotations.openshift\.io/scc,UID:.spec.containers[0].securityContext.runAsUser,STATUS:.status.phase'
+```
+
+### Things to know
+
+- **Use `enabled: false`, not `{}`.** Helm deep-merges the chart defaults back into an empty
+  block, so `securityContext: {}` changes nothing.
+- **Disable all three gateway blocks**, including
+  `gateway.initContainers.setupDirectories.securityContext`. Left enabled, the init container falls
+  back to UID 65532, which `restricted-v2` rejects.
 
 ---
 

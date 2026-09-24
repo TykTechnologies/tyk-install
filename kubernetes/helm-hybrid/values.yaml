@@ -7,6 +7,9 @@ global:
       - tyk-redis-master:6379
     pass: ""
     useSSL: false
+    # Renders TYK_GW_STORAGE_MAXIDLE. Do not also set it in extraEnvs: the
+    # duplicate env var makes `helm upgrade` fail.
+    maxIdle: 3000
     storage:
       database: 0
 
@@ -20,8 +23,12 @@ global:
 
     enabled: true
 
-    # IMPORTANT: connectionString must be set here, not in the secret
+    # Set the MDCB endpoint here, or (tyk-charts 5.4.0+) read it from a secret
+    # with connectionStringSecretName - independent of useSecretName above.
+    # The key defaults to "connectionString"; override with connectionStringSecretKey.
     connectionString: "your-mdcb.cloud-ara.tyk.io:443"  # REPLACE with your MDCB endpoint
+    # connectionStringSecretName: "tyk-data-plane-conf"
+    # connectionStringSecretKey: "connectionString"
 
     # Enable SSL for MDCB connection
     useSSL: true
@@ -74,8 +81,6 @@ tyk-gateway:
         value: "true"
       - name: TYK_GW_PROXYSSLINSECURESKIPVERIFY
         value: "true"
-      - name: TYK_GW_STORAGE_MAXIDLE
-        value: "3000"
       - name: TYK_GW_STORAGE_MAXACTIVE
         value: "5000"
       - name: TYK_GW_ANALYTICSCONFIG_ENABLEDETAILEDRECORDING
@@ -201,28 +206,26 @@ tyk-gateway:
           key_file: "/etc/certs/tyk-gateway/tls.key"
 
     service:
-      type: LoadBalancer # Change to ClusterIP when using Ingress
+      type: LoadBalancer # Change to ClusterIP when using Ingress or OpenShift Routes (see values-openshift.yaml)
       externalTrafficPolicy: Local
       # annotations: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or layer values-openshift.yaml. Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
+    # # All three gateway blocks must be off: left enabled, the init container's
+    # # block falls back to UID 65532, which restricted-v2 rejects.
+    # initContainers:
+    #   setupDirectories:
+    #     securityContext:
+    #       enabled: false
 
 # PUMP (Optional but recommended)
 tyk-pump:
@@ -243,21 +246,13 @@ tyk-pump:
 
     purgeDelay: 2
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or layer values-openshift.yaml. Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false

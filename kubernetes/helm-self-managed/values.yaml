@@ -241,27 +241,25 @@ tyk-gateway:
       # averageCpuUtilization: 60
 
     service:
-      type: LoadBalancer
+      type: LoadBalancer # OpenShift: ClusterIP, exposed with Routes (see values-openshift.yaml)
       externalTrafficPolicy: Local
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or layer values-openshift.yaml. Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
+    # # All three gateway blocks must be off: left enabled, the init container's
+    # # block falls back to UID 65532, which restricted-v2 rejects.
+    # initContainers:
+    #   setupDirectories:
+    #     securityContext:
+    #       enabled: false
 
 # ============================================================================
 # DASHBOARD CONFIGURATION
@@ -387,29 +385,21 @@ tyk-dashboard:
     # SERVICE CONFIGURATION
     # -------------------------------------------------------------------------
     service:
-      type: LoadBalancer
+      type: LoadBalancer # OpenShift: ClusterIP, exposed with Routes (see values-openshift.yaml)
 
       # Cloud-specific annotations
       # annotations: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or layer values-openshift.yaml. Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
 
   tib: # Enables SSO integration
     enabled: true
@@ -446,24 +436,16 @@ tyk-pump:
       # - name: TYK_PMP_UPTIMEPUMPCONFIG_TABLESHARDING
       #   value: "true" # PROD/PERFORMANCE: Enable table sharding
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or layer values-openshift.yaml. Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
 
 # ============================================================================
 # DEVELOPER PORTAL CONFIGURATION
@@ -546,27 +528,24 @@ tyk-dev-portal:
     tls: []
 
   service:
-    type: LoadBalancer
+    type: LoadBalancer # OpenShift: ClusterIP, exposed with Routes (see values-openshift.yaml)
     port: 3001
 
+  # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+  # Constraint assign UID/GID, or layer values-openshift.yaml. Use
+  # `enabled: false`: `{}` has no effect.
   # -------------------------------------------------------------------------
   # Required for deploying on RedHat OpenShift
   # -------------------------------------------------------------------------
   # securityContext:
-  #   runAsUser: null
-  #   fsGroup: null
-  #   runAsNonRoot: true
+  #   enabled: false
   # containerSecurityContext:
-  #   runAsNonRoot: true
-  #   runAsUser: null
-  #   allowPrivilegeEscalation: false
-  #   privileged: false
-  #   readOnlyRootFilesystem: true
-  #   seccompProfile:
-  #     type: RuntimeDefault
-  #   capabilities:
-  #     drop:
-  #       - ALL
+  #   enabled: false
+  # bootstrapJob:
+  #   securityContext:
+  #     enabled: false
+  #   containerSecurityContext:
+  #     enabled: false
 
 # ============================================================================
 # BOOTSTRAP CONFIGURATION
@@ -580,21 +559,13 @@ tyk-bootstrap:
     org:
       name: "Install Organization"
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or layer values-openshift.yaml. Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false

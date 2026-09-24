@@ -8,6 +8,9 @@
 - Tyk Control Plane (Tyk Cloud or Self-Managed MDCB) set up and running
 - MDCB connection credentials (Connection String, Organization ID, API Key, Group ID)
 
+> **Red Hat OpenShift?** Follow the steps below, with the changes described in
+> [Deploying on Red Hat OpenShift](#deploying-on-red-hat-openshift). It requires tyk-charts 5.4.0 or later.
+
 ---
 
 ## Quick Start
@@ -69,7 +72,7 @@ cp .env.example .env
 source .env
 ```
 
-**Note:** The `connectionString` will be configured directly in `values.yaml` (see step 3b).
+**Note:** The `connectionString` is configured in `values.yaml` or, from tyk-charts 5.4.0, in a secret (see step 3b).
 
 ---
 
@@ -80,7 +83,9 @@ source .env
 kubectl create namespace tyk-dp
 
 # Create secret for data plane configuration
-# NOTE: connectionString is NOT included here - it must be set in values.yaml
+# The connection string is set in step 3b - in values.yaml, or (tyk-charts 5.4.0+)
+# add --from-literal=connectionString=$TYK_MDCB_CONNECTION_STRING here instead
+# and set connectionStringSecretName (step 3b, Option B)
 kubectl create secret generic tyk-data-plane-conf \
   --namespace tyk-dp \
   --from-literal=APISecret=$TYK_API_SECRET \
@@ -94,11 +99,12 @@ kubectl get secret tyk-data-plane-conf -n tyk-dp -oyaml
 
 ---
 
-### 3b. Configure Connection String in values.yaml
+### 3b. Configure the Connection String
 
-**IMPORTANT:** The `connectionString` cannot be stored in the Kubernetes secret. It must be configured directly in `values.yaml`.
+Set the MDCB connection string either in `values.yaml` or, from tyk-charts 5.4.0, in a Kubernetes
+secret.
 
-Edit your `values.yaml` file and add the `connectionString` under `global.remoteControlPlane`:
+**Option A - in `values.yaml`.** Add the `connectionString` under `global.remoteControlPlane`:
 
 ```yaml
 global:
@@ -115,6 +121,19 @@ global:
 **For Tyk Cloud:** Use `__.cloud-ara.tyk.io:443`
 **For Self-Managed:** Use your MDCB endpoint
 
+**Option B - in a secret (tyk-charts 5.4.0+).** Store the connection string in a secret and point
+`connectionStringSecretName` at it. This is independent of `useSecretName`: it can be the same
+`tyk-data-plane-conf` secret (add a `connectionString` key in step 3) or a separate one. The gateway
+and pump then read it through a `secretKeyRef` instead of a plain-text value:
+
+```yaml
+global:
+  remoteControlPlane:
+    useSecretName: "tyk-data-plane-conf"
+    connectionStringSecretName: "tyk-data-plane-conf"
+    # connectionStringSecretKey: "connectionString"  # key name, if not "connectionString"
+```
+
 ---
 
 ### 4. Install Dependencies (Redis)
@@ -125,6 +144,8 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
 
 # Install Redis
+# On RedHat OpenShift no extra flags are needed: this chart version detects
+# OpenShift and drops its fixed UID/fsGroup so the SCC can assign them.
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
   --set image.repository=bitnamilegacy/redis \
   --namespace tyk-dp \
@@ -148,6 +169,12 @@ helm repo update
 helm install tyk-dp tyk-helm/tyk-data-plane \
   --namespace tyk-dp \
   --values values.yaml
+
+# On RedHat OpenShift, layer the OpenShift overlay instead (tyk-charts 5.4.0+):
+# helm install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+#   --namespace tyk-dp \
+#   --values values.yaml \
+#   --values values-openshift.yaml
 
 # Monitor installation and wait (~30 sec)
 kubectl get pods -n tyk-dp -w
@@ -199,6 +226,9 @@ curl <LOADBALANCER-ADDRESS>/hello
 #### Option 2: Port-Forward (Best for Local Testing)
 
 Quick access for local testing without external exposure.
+
+> **On OpenShift** skip to *Forward and test*: `values-openshift.yaml` already sets the gateway
+> service to `ClusterIP`, and upgrading with `values.yaml` alone would drop the overlay.
 
 **Update Gateway service in values.yaml:**
 
@@ -417,6 +447,13 @@ The Gateway Route will be available at a URL such as:
 http://gateway-svc-tyk-dp-tyk-gateway-tyk-dp.apps.<cluster-domain>
 ```
 
+**Or, instead of `oc expose`, an HTTPS route with edge termination** (this uses the router's `*.apps`
+certificate, and plain HTTP redirects to HTTPS):
+
+```bash
+oc create route edge gateway --service=gateway-svc-tyk-dp-tyk-gateway --port=8080 --insecure-policy=Redirect -n tyk-dp
+```
+
 ---
 
 ### 7. Verify Data Plane Connection
@@ -505,6 +542,53 @@ kubectl get pods -n tyk-dp -l control-plane=tyk-operator-controller-manager
 
 **Test Operator (Optional):**
 Create a sample API using Tyk Operator CRD to verify it's working. The operator will create the API on your control plane Dashboard, which will then sync to your data plane gateways. Refer to [Tyk Operator documentation](https://tyk.io/docs/api-management/automations/operator) for examples.
+
+---
+
+## Deploying on Red Hat OpenShift
+
+tyk-charts 5.4.0 and later install on OpenShift without Kustomize patches. Every security context
+block in the Tyk component charts accepts `enabled: false`, which omits the block from the manifest
+so OpenShift's Security Context Constraint (SCC), normally `restricted-v2`, assigns the UID and GID
+from the namespace's allocated range. [`values-openshift.yaml`](values-openshift.yaml) sets all of
+them and switches the gateway service to `ClusterIP`. The same security context settings are
+also commented beside each component in `values.yaml` under
+`Required for deploying on RedHat OpenShift`.
+
+Run the Quick Start steps with these changes:
+
+| Step | Change on OpenShift |
+| --- | --- |
+| 1 | `oc login` instead of the cloud CLI. |
+| 4 | Redis needs no extra flags. |
+| 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
+| 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
+| 8 | The operator and cert-manager need cluster-admin. |
+| Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
+
+### Install
+
+```bash
+helm install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+  --namespace tyk-dp \
+  --values values.yaml \
+  --values values-openshift.yaml \
+  --wait --timeout 10m
+```
+
+Verify that every pod was admitted under `restricted-v2` with a UID from the namespace range:
+
+```bash
+oc get pods -n tyk-dp -o custom-columns='NAME:.metadata.name,SCC:.metadata.annotations.openshift\.io/scc,UID:.spec.containers[0].securityContext.runAsUser,STATUS:.status.phase'
+```
+
+### Things to know
+
+- **Use `enabled: false`, not `{}`.** Helm deep-merges the chart defaults back into an empty
+  block, so `securityContext: {}` changes nothing.
+- **Disable all three gateway blocks**, including
+  `gateway.initContainers.setupDirectories.securityContext`. Left enabled, the init container falls
+  back to UID 65532, which `restricted-v2` rejects.
 
 ---
 
