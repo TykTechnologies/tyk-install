@@ -652,7 +652,7 @@ Run the Quick Start steps with these changes:
 | Step | Change on OpenShift |
 | --- | --- |
 | 1 | `oc login` instead of the cloud CLI. |
-| 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator (it installs cluster-scoped CRDs) and cert-manager need cluster-admin; without it, `helm install` fails with `cannot patch resource "customresourcedefinitions"`, so skip cert-manager and install with `--set global.components.operator=false`. |
+| 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator (it installs cluster-scoped CRDs) and cert-manager need cluster-admin; without it, `helm install` fails with `cannot patch resource "customresourcedefinitions"`, so skip cert-manager and install with `--set global.components.operator=false`. A cluster admin can then add the operator for your namespace; see [Operator without cluster-admin](#operator-without-cluster-admin). |
 | 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
 | 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
@@ -683,6 +683,48 @@ oc get pods -n tyk -o custom-columns='NAME:.metadata.name,SCC:.metadata.annotati
 - **Disable all three gateway blocks**, including
   `gateway.initContainers.setupDirectories.securityContext`. Left enabled, the init container falls
   back to UID 65532, which `restricted-v2` rejects.
+
+### Operator without cluster-admin
+
+The operator chart creates cluster-scoped CRDs and ClusterRoles, so only a cluster admin can
+install it. The team that owns the namespace needs no cluster-admin to use it afterwards.
+[`values-operator-namespaced.yaml`](values-operator-namespaced.yaml) makes the operator reconcile
+only its own namespace (`WATCH_NAMESPACE`), turns off its admission webhooks so cert-manager is
+not needed, and reads the operator licence from `tyk-conf`.
+
+1. The namespace owner installs the stack as in [Install](#install), adding
+   `--set global.components.operator=false`. The bootstrap job still writes `tyk-operator-conf`
+   with the Dashboard URL, organisation and API key.
+2. A cluster admin installs the operator into the same namespace:
+
+   ```bash
+   helm install tyk-operator tyk-helm/tyk-operator --version 1.5.0 \
+     --namespace tyk \
+     --values values-operator-namespaced.yaml
+   ```
+
+3. A cluster admin lets namespace admins and editors manage Tyk resources (once per cluster). The
+   default `admin` and `edit` roles do not cover custom resources, so without this the namespace
+   owner gets `forbidden` when creating a `TykOasApiDefinition`.
+
+   ```bash
+   oc apply -f - <<'EOF'
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: tyk-operator-resources-edit
+     labels:
+       rbac.authorization.k8s.io/aggregate-to-admin: "true"
+       rbac.authorization.k8s.io/aggregate-to-edit: "true"
+   rules:
+     - apiGroups: ["tyk.tyk.io"]
+       resources: ["*"]
+       verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+   EOF
+   ```
+
+`WATCH_NAMESPACE` limits which namespace the operator acts on, not its permissions: the chart binds
+the operator's ClusterRole cluster-wide.
 
 ---
 

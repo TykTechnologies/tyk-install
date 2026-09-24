@@ -1,0 +1,39 @@
+# ============================================================================
+# TYK OPERATOR - SINGLE-NAMESPACE INSTALL (tyk-operator chart 1.5.0+)
+# ============================================================================
+# For clusters where the team that runs the Tyk stack has no cluster-admin,
+# such as an OpenShift project. The team installs the stack with
+# `--set global.components.operator=false`, then a cluster admin installs the
+# operator into the same namespace:
+#
+#   helm install tyk-operator tyk-helm/tyk-operator --version 1.5.0 \
+#     --namespace tyk -f values-operator-namespaced.yaml
+#
+# The chart still creates cluster-scoped CRDs and ClusterRoles, so this install
+# needs cluster-admin. WATCH_NAMESPACE limits what the operator reconciles, not
+# the permissions the chart grants it.
+# ============================================================================
+
+# No admission webhooks, so no cert-manager. The controller still validates
+# each custom resource when it reconciles it.
+webhooks:
+  enabled: false
+
+envVars:
+  # Chart defaults, repeated because setting envVars replaces the whole list.
+  - name: TYK_HTTPS_INGRESS_PORT
+    value: "8443"
+  - name: TYK_HTTP_INGRESS_PORT
+    value: "8080"
+  # Reconcile custom resources in the operator's own namespace only.
+  - name: WATCH_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+  # With the stack's operator off, the bootstrap job writes tyk-operator-conf
+  # without the licence, so read it from tyk-conf.
+  - name: TYK_OPERATOR_LICENSEKEY
+    valueFrom:
+      secretKeyRef:
+        name: tyk-conf
+        key: OperatorLicense
