@@ -548,11 +548,12 @@ Create a sample API using Tyk Operator CRD to verify it's working. The operator 
 ## Deploying on Red Hat OpenShift
 
 tyk-charts 5.4.0 and later install on OpenShift without Kustomize patches. Every security context
-block in the Tyk component charts accepts `enabled: false`, which omits the block from the manifest so OpenShift's Security Context
-Constraint (SCC), normally `restricted-v2`, assigns the UID and GID from the namespace's allocated
-range. [`values-openshift.yaml`](values-openshift.yaml) sets all of them and switches the gateway
-service to `ClusterIP`. The same security context settings are also commented beside each
-component in `values.yaml` under `Required for deploying on RedHat OpenShift`.
+block in the Tyk component charts accepts `enabled: false`, which omits the block from the manifest
+so OpenShift's Security Context Constraint (SCC), normally `restricted-v2`, assigns the UID and GID
+from the namespace's allocated range. [`values-openshift.yaml`](values-openshift.yaml) sets all of
+them and switches the gateway service to `ClusterIP`. The same security context settings are
+also commented beside each component in `values.yaml` under
+`Required for deploying on RedHat OpenShift`.
 
 Run the Quick Start steps with these changes:
 
@@ -585,10 +586,9 @@ oc get pods -n tyk-dp -o custom-columns='NAME:.metadata.name,SCC:.metadata.annot
 
 - **Use `enabled: false`, not `{}`.** Helm deep-merges the chart defaults back into an empty
   block, so `securityContext: {}` changes nothing.
-- **Disable all three gateway blocks.** If the `setup-directories` init container's own block stays
-  enabled, it takes `runAsUser` from `gateway.containerSecurityContext`, then
-  `gateway.securityContext`, then `65532`. With the other two disabled it lands on `65532`, which
-  `restricted-v2` rejects.
+- **Disable all three gateway blocks**, including
+  `gateway.initContainers.setupDirectories.securityContext`. Left enabled, the init container falls
+  back to UID 65532, which `restricted-v2` rejects.
 
 ---
 

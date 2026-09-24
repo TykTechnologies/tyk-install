@@ -254,9 +254,8 @@ tyk-gateway:
     #   enabled: false
     # containerSecurityContext:
     #   enabled: false
-    # # Disable the init container's own block too: left enabled, it takes
-    # # runAsUser from containerSecurityContext, then securityContext, then
-    # # 65532 - which restricted-v2 rejects once the other two are disabled.
+    # # All three gateway blocks must be off: left enabled, the init container's
+    # # block falls back to UID 65532, which restricted-v2 rejects.
     # initContainers:
     #   setupDirectories:
     #     securityContext:
@@ -401,11 +400,6 @@ tyk-dashboard:
     #   enabled: false
     # containerSecurityContext:
     #   enabled: false
-    # # Only renders for un-prefixed dashboard tags <= 5.0.2 (5.0.2, not v5.0.2).
-    # initContainers:
-    #   initAnalyticsConf:
-    #     securityContext:
-    #       enabled: false
 
   tib: # Enables SSO integration
     enabled: true
@@ -575,16 +569,3 @@ tyk-bootstrap:
     #   enabled: false
     # containerSecurityContext:
     #   enabled: false
-
-# ============================================================================
-# HELM TEST POD
-# ============================================================================
-# The `helm test` pod pins runAsUser 1000, which restricted-v2 rejects.
-# -------------------------------------------------------------------------
-# Required for deploying on RedHat OpenShift
-# -------------------------------------------------------------------------
-# tests:
-#   securityContext:
-#     enabled: false
-#   containerSecurityContext:
-#     enabled: false

@@ -7,9 +7,8 @@ global:
       - tyk-redis-master:6379
     pass: ""
     useSSL: false
-    # The chart renders TYK_GW_STORAGE_MAXIDLE from this value. Setting it in
-    # extraEnvs as well duplicates the env var, which makes `helm upgrade` fail
-    # with "cannot patch ... The order in patch list".
+    # Renders TYK_GW_STORAGE_MAXIDLE. Do not also set it in extraEnvs: the
+    # duplicate env var makes `helm upgrade` fail.
     maxIdle: 3000
     storage:
       database: 0
@@ -221,9 +220,8 @@ tyk-gateway:
     #   enabled: false
     # containerSecurityContext:
     #   enabled: false
-    # # Disable the init container's own block too: left enabled, it takes
-    # # runAsUser from containerSecurityContext, then securityContext, then
-    # # 65532 - which restricted-v2 rejects once the other two are disabled.
+    # # All three gateway blocks must be off: left enabled, the init container's
+    # # block falls back to UID 65532, which restricted-v2 rejects.
     # initContainers:
     #   setupDirectories:
     #     securityContext:
@@ -258,16 +256,3 @@ tyk-pump:
     #   enabled: false
     # containerSecurityContext:
     #   enabled: false
-
-# ============================================================================
-# HELM TEST POD
-# ============================================================================
-# The `helm test` pod pins runAsUser 1000, which restricted-v2 rejects.
-# -------------------------------------------------------------------------
-# Required for deploying on RedHat OpenShift
-# -------------------------------------------------------------------------
-# tests:
-#   securityContext:
-#     enabled: false
-#   containerSecurityContext:
-#     enabled: false

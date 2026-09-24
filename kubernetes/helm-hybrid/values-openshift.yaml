@@ -24,9 +24,8 @@ tyk-gateway:
       enabled: false
     containerSecurityContext:
       enabled: false
-    # Disable the init container's own block too: left enabled, it takes
-    # runAsUser from containerSecurityContext, then securityContext, then
-    # 65532 - which restricted-v2 rejects once the other two are disabled.
+    # All three gateway blocks must be off: left enabled, the init container's
+    # block falls back to UID 65532, which restricted-v2 rejects.
     initContainers:
       setupDirectories:
         securityContext:

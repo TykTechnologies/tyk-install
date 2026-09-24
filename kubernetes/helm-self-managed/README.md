@@ -561,8 +561,7 @@ kubectl get secret tyk-conf -n tyk -o jsonpath='{.data.adminUserPassword}' | bas
 ```bash
 # Login to Dashboard first to get your API key
 # Dashboard > Users > Your User > API Access Credentials
-# Or read the API key the bootstrap job stored for the admin user
-# (the bootstrap jobs are deleted once they succeed, so their logs are gone):
+# Or read the admin user's API key stored by the bootstrap job:
 kubectl get secret tyk-operator-conf -n tyk -o jsonpath='{.data.TYK_AUTH}' | base64 -d && echo
 
 # Set your Dashboard API key
@@ -641,11 +640,12 @@ curl $GATEWAY_URL/httpbin/get
 ## Deploying on Red Hat OpenShift
 
 tyk-charts 5.4.0 and later install on OpenShift without Kustomize patches. Every security context
-block in the Tyk component charts accepts `enabled: false`, which omits the block from the manifest so OpenShift's Security Context
-Constraint (SCC), normally `restricted-v2`, assigns the UID and GID from the namespace's allocated
-range. [`values-openshift.yaml`](values-openshift.yaml) sets all of them and switches every service
-to `ClusterIP`. The same security context settings are also commented beside each component in
-`values.yaml` under `Required for deploying on RedHat OpenShift`.
+block in the Tyk component charts accepts `enabled: false`, which omits the block from the manifest
+so OpenShift's Security Context Constraint (SCC), normally `restricted-v2`, assigns the UID and GID
+from the namespace's allocated range. [`values-openshift.yaml`](values-openshift.yaml) sets all of
+them and switches every service to `ClusterIP`. The same security context settings are
+also commented beside each component in `values.yaml` under
+`Required for deploying on RedHat OpenShift`.
 
 Run the Quick Start steps with these changes:
 
@@ -677,10 +677,9 @@ oc get pods -n tyk -o custom-columns='NAME:.metadata.name,SCC:.metadata.annotati
 
 - **Use `enabled: false`, not `{}`.** Helm deep-merges the chart defaults back into an empty
   block, so `securityContext: {}` changes nothing.
-- **Disable all three gateway blocks.** If the `setup-directories` init container's own block stays
-  enabled, it takes `runAsUser` from `gateway.containerSecurityContext`, then
-  `gateway.securityContext`, then `65532`. With the other two disabled it lands on `65532`, which
-  `restricted-v2` rejects.
+- **Disable all three gateway blocks**, including
+  `gateway.initContainers.setupDirectories.securityContext`. Left enabled, the init container falls
+  back to UID 65532, which `restricted-v2` rejects.
 
 ---
 
