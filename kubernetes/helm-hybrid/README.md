@@ -559,26 +559,12 @@ Run the Quick Start steps with these changes:
 
 | Step | Change on OpenShift |
 | --- | --- |
-| 1 | `oc login`, then check with `oc whoami` and `oc project`. `kubectl get nodes` needs cluster-wide rights that the Developer Sandbox and other non-admin users do not have. |
-| 3 | On the Developer Sandbox you get one project and cannot create namespaces: skip `create namespace`, and use `$(oc project -q)` wherever a command names the `tyk-dp` namespace (`-n tyk-dp`, `--namespace tyk-dp`, and the `-tyk-dp` suffix in Route hostnames). The release name `tyk-dp` stays. |
+| 1 | `oc login` instead of the cloud CLI. |
 | 4 | Redis needs no extra flags. |
 | 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
-| 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). Many OpenShift clusters limit LoadBalancer services, and the Developer Sandbox quota allows none. |
+| 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | 8 | The operator and cert-manager need cluster-admin. |
 | Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down (see [upgrading](#things-to-know)). |
-
-### Check your privileges first
-
-Workload pods are admitted by the SCCs available to their **service account** (the gateway and
-pump run as `default`), not to the user running `helm`. If that account can use `anyuid`, pods that
-`restricted-v2` would reject are admitted anyway and a test passes that would fail elsewhere. Check
-it, then after installing confirm the SCC each pod actually got (see [Install](#install)):
-
-```bash
-oc whoami
-oc auth can-i use scc/anyuid --as=system:serviceaccount:"$(oc project -q)":default   # "no"
-oc get ns "$(oc project -q)" -o jsonpath='{.metadata.annotations.openshift\.io/sa\.scc\.uid-range}{"\n"}'
-```
 
 ### Install
 

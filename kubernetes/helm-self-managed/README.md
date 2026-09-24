@@ -652,27 +652,11 @@ Run the Quick Start steps with these changes:
 
 | Step | Change on OpenShift |
 | --- | --- |
-| 1 | `oc login`, then check with `oc whoami` and `oc project`. `kubectl get nodes` needs cluster-wide rights that the Developer Sandbox and other non-admin users do not have. |
-| 3 | On the Developer Sandbox you get one project and cannot create namespaces: skip `create namespace`, and use `$(oc project -q)` wherever a command names the `tyk` namespace (`-n tyk`, `--namespace tyk`, and the `-tyk` suffix in Route hostnames). |
+| 1 | `oc login` instead of the cloud CLI. |
 | 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator and cert-manager need cluster-admin; without it, skip cert-manager and install with `--set global.components.operator=false`. |
 | 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
-| 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). Many OpenShift clusters limit LoadBalancer services, and the Developer Sandbox quota allows none. |
+| 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down (see [upgrading](#things-to-know)). |
-
-### Check your privileges first
-
-Workload pods are admitted by the SCCs available to their **service account** (every Tyk pod runs
-as `default`; the bootstrap jobs as `k8s-bootstrap-role`), not to the user running `helm`. If either
-account can use `anyuid`, pods that `restricted-v2` would reject are admitted anyway and a test
-passes that would fail elsewhere. Check both, then after installing confirm the SCC each pod
-actually got (see [Install](#install)):
-
-```bash
-oc whoami
-oc auth can-i use scc/anyuid --as=system:serviceaccount:"$(oc project -q)":default             # "no"
-oc auth can-i use scc/anyuid --as=system:serviceaccount:"$(oc project -q)":k8s-bootstrap-role  # "no"
-oc get ns "$(oc project -q)" -o jsonpath='{.metadata.annotations.openshift\.io/sa\.scc\.uid-range}{"\n"}'
-```
 
 ### Install
 
@@ -720,9 +704,8 @@ oc get pods -n tyk -o custom-columns='NAME:.metadata.name,SCC:.metadata.annotati
   Installing the operator and cert-manager requires cluster-admin.
 - **`helm test`.** The overlay disables the test pod's security contexts, which otherwise pin
   `runAsUser: 1000`. Separately, the `tyk-stack` test pod only finds the gateway when the release
-  name contains `tyk-stack`; with the release name `tyk` used in this guide it looks up
-  `gateway-svc-tyk-tyk-stack-tyk-gateway` and fails on any platform. Use a release name such as
-  `tyk-stack` if you rely on `helm test`.
+  name contains `tyk-stack` (a known chart issue on every platform), so with the release name `tyk`
+  used in this guide `helm test` fails even though the stack is healthy.
 
 ---
 

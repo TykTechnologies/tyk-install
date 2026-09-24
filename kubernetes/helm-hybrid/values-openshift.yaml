@@ -34,8 +34,7 @@ tyk-gateway:
       setupDirectories:
         securityContext:
           enabled: false
-    # OpenShift exposes services through Routes. LoadBalancer services are
-    # often not permitted (the Developer Sandbox quota allows none).
+    # OpenShift exposes services through Routes (see the README).
     service:
       type: ClusterIP
 
