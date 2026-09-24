@@ -652,7 +652,7 @@ Run the Quick Start steps with these changes:
 | Step | Change on OpenShift |
 | --- | --- |
 | 1 | `oc login` instead of the cloud CLI. |
-| 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator and cert-manager need cluster-admin; without it, skip cert-manager and install with `--set global.components.operator=false`. |
+| 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator (it installs cluster-scoped CRDs) and cert-manager need cluster-admin; without it, `helm install` fails with `cannot patch resource "customresourcedefinitions"`, so skip cert-manager and install with `--set global.components.operator=false`. |
 | 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
 | 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
@@ -663,9 +663,12 @@ Run the Quick Start steps with these changes:
 helm install tyk tyk-helm/tyk-stack --version 5.4.0 \
   --namespace tyk \
   --values values.yaml \
-  --values values-openshift.yaml \
-  --wait --timeout 15m
+  --values values-openshift.yaml
 ```
+
+Do not add `--wait`. The operator needs the `tyk-operator-conf` secret, which the bootstrap job
+creates after the install; with `--wait`, Helm never runs that job and the install times out. Until
+the job has run (about a minute), the operator pod reports `secret "tyk-operator-conf" not found`.
 
 Verify that every pod was admitted under `restricted-v2` with a UID from the namespace range:
 
