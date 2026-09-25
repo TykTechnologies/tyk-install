@@ -652,8 +652,8 @@ Run the Quick Start steps with these changes:
 | Step | Change on OpenShift |
 | --- | --- |
 | 1 | `oc login` instead of the cloud CLI. |
-| 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. The operator (it installs cluster-scoped CRDs) and cert-manager need cluster-admin; without it, `helm install` fails with `cannot patch resource "customresourcedefinitions"`, so skip cert-manager and install with `--set global.components.operator=false`. A cluster admin can then add the operator for your namespace; see [Operator without cluster-admin](#operator-without-cluster-admin). |
-| 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
+| 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. cert-manager is only for the operator and needs cluster-admin; without cluster-admin, skip it. |
+| 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml` (see [Install](#install)). The operator installs cluster-scoped CRDs, so it needs cluster-admin; without it, `helm install` fails with `cannot patch resource "customresourcedefinitions"`. Add `--set global.components.operator=false`, and a cluster admin can add the operator for your namespace later; see [Operator without cluster-admin](#operator-without-cluster-admin). |
 | 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
 
