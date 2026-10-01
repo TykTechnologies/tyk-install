@@ -75,26 +75,26 @@ TYK_PMP_PUMPS_HYBRID_META_APIKEY=your-dashboard-api-key
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # Verify services are running
-docker-compose ps
+docker compose ps
 ```
 
 **Expected containers:**
 
-- `tyk-gateway` - Running (port 8080)
-- `tyk-pump` - Running
-- `tyk-redis` - Running (port 6379)
+- `tyk-gateway-hybrid` - Running (port 8080)
+- `tyk-pump-hybrid` - Running
+- `tyk-redis-hybrid` - Running (port 6379)
 
 Wait for health checks to pass (~30 seconds):
 
 ```bash
 # Watch container status
-docker-compose ps
+docker compose ps
 
 # Check logs if needed
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ---
@@ -103,7 +103,7 @@ docker-compose logs -f
 
 ```bash
 # Check Gateway logs for successful MDCB connection
-docker-compose logs tyk-gateway
+docker compose logs tyk-gateway
 
 # Test Gateway health
 curl http://localhost:8080/hello
@@ -203,7 +203,7 @@ curl http://localhost:8080/your-api-path/get
 
 ```bash
 # Check Gateway logs for connection errors
-docker-compose logs tyk-gateway
+docker compose logs tyk-gateway
 
 # Common issues:
 # 1. Incorrect MDCB connection string
@@ -221,7 +221,7 @@ docker-compose logs tyk-gateway
 3. Check Gateway logs for sync errors:
 
 ```bash
-docker-compose logs tyk-gateway
+docker compose logs tyk-gateway
 ```
 
 ---
@@ -236,13 +236,13 @@ docker-compose logs tyk-gateway
 
 ```bash
 # Stop all services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (DELETES ALL DATA)
-docker-compose down -v
+docker compose down -v
 
 # Full cleanup including networks
-docker-compose down -v --remove-orphans
+docker compose down -v --remove-orphans
 docker network prune -f
 ```
 
@@ -262,7 +262,7 @@ PUMP_VERSION=v1.17.0
 ## Resources
 
 - [Hybrid Gateway Documentation](https://tyk.io/docs/tyk-cloud/environments-deployments/hybrid-gateways)
-- [MDCB Configuration](https://tyk.io/docs/tyk-multi-data-centre/)
+- [MDCB Configuration](https://tyk.io/docs/api-management/mdcb)
 - [Tyk Cloud Console](https://account.cloud-ara.tyk.io/)
 - [Release Notes](https://tyk.io/docs/developer-support/release-notes/overview)
 - [Support](https://support.tyk.io/hc/en-gb)

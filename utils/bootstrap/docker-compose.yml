@@ -12,7 +12,7 @@ services:
       - PORTAL_URL=http://tyk-portal:3001
       - ADMIN_SECRET=admin-secret
     volumes:
-      - bootstrap-output:/bootstrap-output
+      - ./bootstrap-output:/bootstrap-output
     profiles:
       - tools
 networks:
@@ -20,6 +20,3 @@ networks:
     driver: bridge
     name: tyk
     external: true
-volumes:
-  bootstrap-output:
-    name: bootstrap-output
