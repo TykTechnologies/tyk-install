@@ -242,4 +242,4 @@ kubectl get secret tyk-operator-conf -n tyk-operator -o jsonpath='{.data.TYK_AUT
 
 ## 🔗 Resources
 
-- [Operator Documentation](https://tyk.io/docs/tyk-operator/)
+- [Operator Documentation](https://tyk.io/docs/api-management/automations/operator)

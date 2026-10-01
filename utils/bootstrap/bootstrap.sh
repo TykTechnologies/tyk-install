@@ -5,12 +5,12 @@
 # ============================================================================
 BOOTSTRAP_MARKER="./bootstrap-output/.bootstrap_completed"
 CREDS_FILE="./bootstrap-output/bootstrap-credentials.txt"
-#### environment vars to set if running script standalone not through docker-compose
-# TYK_LICENSE_KEY=
-# DASHBOARD_URL=http://localhost:3000
-# GATEWAY_URL=https://localhost:8080
-# PORTAL_URL=http://localhost:3001
-# ADMIN_SECRET=admin-secret
+# Defaults for running the script on the host. docker compose overrides them.
+# TYK_LICENSE_KEY has no default and must be set.
+DASHBOARD_URL="${DASHBOARD_URL:-http://localhost:3000}"
+GATEWAY_URL="${GATEWAY_URL:-http://localhost:8080}"
+PORTAL_URL="${PORTAL_URL:-http://localhost:3001}"
+ADMIN_SECRET="${ADMIN_SECRET:-admin-secret}"
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -62,7 +62,7 @@ check_if_already_bootstrapped() {
         else
             log_error "Bootstrap marker exists but credentials file not found"
             echo ""
-            echo "To restart: docker-compose down -v && rm -rf ./output/"
+            echo "To restart: rm -rf ./bootstrap-output/"
         fi
         
     fi
