@@ -17,7 +17,7 @@ services:
 
   tyk-gateway:
     restart: unless-stopped
-    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.15.0}
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.15.1}
     container_name: tyk-gateway-hybrid
     ports:
       - "8080:8080"

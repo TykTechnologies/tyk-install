@@ -410,8 +410,8 @@ docker network prune -f
 Update versions in `.env`, use the latest versions:
 
 ```bash
-DASHBOARD_VERSION=v5.15.0
-GATEWAY_VERSION=v5.15.0
+DASHBOARD_VERSION=v5.15.1
+GATEWAY_VERSION=v5.15.1
 PUMP_VERSION=v1.17.0
 PORTAL_VERSION=v1.19.0
 ```
