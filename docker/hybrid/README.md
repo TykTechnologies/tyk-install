@@ -262,7 +262,7 @@ PUMP_VERSION=v1.17.0
 ## Resources
 
 - [Hybrid Gateway Documentation](https://tyk.io/docs/tyk-cloud/environments-deployments/hybrid-gateways)
-- [MDCB Configuration](https://tyk.io/docs/api-management/mdcb)
+- [MDCB Configuration](https://tyk.io/docs/tyk-multi-data-centre/mdcb-configuration-options)
 - [Tyk Cloud Console](https://account.cloud-ara.tyk.io/)
 - [Release Notes](https://tyk.io/docs/developer-support/release-notes/overview)
 - [Support](https://support.tyk.io/hc/en-gb)
