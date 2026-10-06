@@ -68,10 +68,10 @@ openssl req \
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # Verify services are running
-docker-compose ps
+docker compose ps
 ```
 
 **Expected containers:**
@@ -84,10 +84,10 @@ Wait for all health checks to pass (~30-60 seconds):
 
 ```bash
 # Watch container status
-docker-compose ps
+docker compose ps
 
 # Check logs if needed
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ---
@@ -172,7 +172,7 @@ If you switch to the Enterprise images, set `TYK_AI_LICENSE` before the first st
 **Symptom:** Microgateway logs show edge/control connection errors
 
 ```bash
-docker-compose logs microgateway
+docker compose logs microgateway
 ```
 
 Common issues:
@@ -185,7 +185,7 @@ Common issues:
 If Microgateway fails with `type "blob" does not exist`, add the compatibility domains to the existing Microgateway database and restart Microgateway:
 
 ```bash
-docker-compose exec -T postgres psql -U tykuser -d tyk_ai_microgateway <<'SQL'
+docker compose exec -T postgres psql -U tykuser -d tyk_ai_microgateway <<'SQL'
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'blob') THEN
@@ -203,14 +203,14 @@ END
 $$;
 SQL
 
-docker-compose restart microgateway
+docker compose restart microgateway
 ```
 
 For disposable local PoCs, you can also recreate the Postgres volume so the init script runs again:
 
 ```bash
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 ### Registration Returns 400

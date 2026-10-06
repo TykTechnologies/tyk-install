@@ -4,7 +4,7 @@ Tyk deployment configurations for Docker and Kubernetes. All configurations are 
 
 ## Prerequisites
 
-**Tyk Licenses** - Get free trial access at [tyk.io/sign-up](https://tyk.io/sign-up/)
+**Tyk Licenses** - Request a free license with a [Tyk Self-Managed trial](https://tyk.io/self-managed-trial/). For a hosted control plane, [create a Tyk Cloud account](https://tyk.io/docs/getting-started/create-account). To run only the open source Tyk Gateway, you do not need a license or this repository: follow the [Tyk Open Source Gateway quick start](https://tyk.io/docs/deployment-and-operations/tyk-open-source-api-gateway/quick-start).
 
 Required licenses depend on deployment type:
 
@@ -14,12 +14,25 @@ Required licenses depend on deployment type:
 
 ## Quick Start
 
-Choose your deployment:
+The fastest way to try Tyk Self-Managed is the Getting Started deployment. It starts the full stack and preloads sample APIs, policies and a configured Developer Portal:
+
+```bash
+git clone https://github.com/TykTechnologies/tyk-install
+cd tyk-install/docker/self-managed
+cp .env.example .env   # set TYK_LICENSE_KEY and TYK_PORTAL_LICENSE
+cd ../getting-started
+bash start.sh
+```
+
+Log in to Tyk Dashboard at http://localhost:3000 with `developer@tyk.io` / `specialpassword`. For the full walkthrough, see the [Tyk Self-Managed quick start](https://tyk.io/docs/getting-started/quick-start).
+
+Or choose a deployment:
 
 ### Docker
 
 | Deployment       | Description                                                     | Guide                            |
 | ---------------- | --------------------------------------------------------------- | -------------------------------- |
+| **Getting Started** | Self-Managed stack with sample APIs, policies and Portal content (`start.sh`) | [Quick start](https://tyk.io/docs/getting-started/quick-start) |
 | **Self-Managed** | Full stack: Dashboard, Gateway, Portal, Pump, Redis, PostgreSQL | [README](./docker/self-managed/) |
 | **Hybrid**       | Data plane connecting to Tyk Cloud/MDCB: Gateway, Pump, Redis   | [README](./docker/hybrid/)       |
 | **AI Studio**    | AI Studio, Microgateway, analytics pulse, and PostgreSQL        | [README](./docker/ai-studio/)    |
@@ -61,6 +74,7 @@ Located in `docker/utils/`:
 tyk-install/
 ├── docker/
 │   ├── self-managed/      # Full stack Docker deployment
+│   ├── getting-started/   # Self-Managed plus sample APIs and Portal content (start.sh)
 │   ├── hybrid/            # Hybrid data plane Docker deployment
 │   ├── ai-studio/         # AI Studio Docker deployment
 │   └── utils/             # Shared Docker utilities
@@ -74,7 +88,7 @@ tyk-install/
 
 ## Resources
 
-- [Free Trial](https://tyk.io/sign-up/)
+- [Tyk Self-Managed Trial](https://tyk.io/self-managed-trial/)
 - [Tyk Documentation](https://tyk.io/docs/)
 - [Tyk Helm Charts](https://github.com/TykTechnologies/tyk-charts)
 - [Release Notes](https://tyk.io/docs/developer-support/release-notes/overview)
