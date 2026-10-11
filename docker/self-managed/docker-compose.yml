@@ -44,6 +44,8 @@ services:
       - "3000:3000"
     env_file:
       - ./confs/tyk_analytics.env
+    environment:
+      TYK_DB_LICENSEKEY: ${TYK_LICENSE_KEY}
     volumes:
       - tyk-dashboard-certs:/opt/tyk-dashboard/certs
     networks:
@@ -95,6 +97,8 @@ services:
       - tyk
     env_file:
       - ./confs/portal.env
+    environment:
+      PORTAL_LICENSEKEY: ${TYK_PORTAL_LICENSE}
     depends_on:
       tyk-postgres:
         condition: service_healthy
