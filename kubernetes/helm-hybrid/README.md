@@ -504,7 +504,7 @@ Tyk Operator enables declarative API management using Kubernetes CRDs. This is u
 # Install cert-manager (required for Tyk Operator webhooks)
 helm install \
   cert-manager oci://quay.io/jetstack/charts/cert-manager \
-  --version v1.17.4 \
+  --version v1.21.2 \
   --namespace cert-manager \
   --create-namespace \
   --set crds.enabled=true
