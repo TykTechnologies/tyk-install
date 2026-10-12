@@ -1,0 +1,99 @@
+# Microsoft Presidio for the Guardrails PII provider (Enterprise Edition).
+#   kubectl apply -n tyk-ai -f presidio.yaml
+#
+# In a Guardrail filter, choose the Microsoft Presidio provider and set:
+#   Analyzer URL:   http://presidio-analyzer:3000
+#   Anonymizer URL: http://presidio-anonymizer:3000 (optional)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: presidio-analyzer
+  labels:
+    app.kubernetes.io/name: presidio-analyzer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: presidio-analyzer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: presidio-analyzer
+    spec:
+      containers:
+        - name: presidio-analyzer
+          image: mcr.microsoft.com/presidio-analyzer:2.2.362
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: presidio-analyzer
+spec:
+  selector:
+    app.kubernetes.io/name: presidio-analyzer
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: presidio-anonymizer
+  labels:
+    app.kubernetes.io/name: presidio-anonymizer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: presidio-anonymizer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: presidio-anonymizer
+    spec:
+      containers:
+        - name: presidio-anonymizer
+          image: mcr.microsoft.com/presidio-anonymizer:2.2.362
+          ports:
+            - name: http
+              containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: presidio-anonymizer
+spec:
+  selector:
+    app.kubernetes.io/name: presidio-anonymizer
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

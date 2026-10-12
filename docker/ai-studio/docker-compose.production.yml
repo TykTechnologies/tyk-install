@@ -1,0 +1,28 @@
+# Production settings from the AI Studio reference architecture.
+#   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+#
+# - gRPC control connection over TLS. AI Studio reuses studio-certs/; the Edge
+#   Gateway trusts that certificate and verifies it as ai-studio.localhost.
+#   With a certificate from your own CA, point EDGE_TLS_CA_PATH at the CA file.
+# - Tighter CORS, plugin and metrics settings.
+# Set METRICS_AUTH_TOKEN in .env.
+
+services:
+  tyk-ai-studio:
+    environment:
+      GRPC_TLS_INSECURE: "false"
+      GRPC_TLS_CERT_PATH: /opt/tyk-ai-studio/certs/tls-certificate.pem
+      GRPC_TLS_KEY_PATH: /opt/tyk-ai-studio/certs/tls-private-key.pem
+      CORS_ALLOWED_ORIGINS: https://ai-studio.localhost:4000
+      PLUGIN_BLOCK_INTERNAL_URLS: "true"
+      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:?set METRICS_AUTH_TOKEN in .env}
+
+  microgateway:
+    environment:
+      EDGE_TLS_ENABLED: "true"
+      EDGE_ALLOW_INSECURE: "false"
+      EDGE_TLS_CA_PATH: /opt/tyk-microgateway/certs/tls-certificate.pem
+      EDGE_TLS_SERVER_NAME: ai-studio.localhost
+      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:?set METRICS_AUTH_TOKEN in .env}
+    volumes:
+      - ./studio-certs/tls-certificate.pem:/opt/tyk-microgateway/certs/tls-certificate.pem:ro

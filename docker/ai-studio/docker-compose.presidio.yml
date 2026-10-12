@@ -1,0 +1,26 @@
+# Optional Microsoft Presidio for the Guardrails PII provider (Enterprise Edition).
+#   docker compose -f docker-compose.yml -f docker-compose.presidio.yml up -d
+#
+# In a Guardrail filter, choose the Microsoft Presidio provider and set:
+#   Analyzer URL:   http://presidio-analyzer:3000
+#   Anonymizer URL: http://presidio-anonymizer:3000 (optional; without it AI Studio
+#                   redacts from the analyzer spans)
+
+services:
+  presidio-analyzer:
+    restart: unless-stopped
+    image: mcr.microsoft.com/presidio-analyzer:2.2.362
+    container_name: tyk-ai-presidio-analyzer
+    ports:
+      - "5002:3000"
+    networks:
+      - tyk-ai-studio
+
+  presidio-anonymizer:
+    restart: unless-stopped
+    image: mcr.microsoft.com/presidio-anonymizer:2.2.362
+    container_name: tyk-ai-presidio-anonymizer
+    ports:
+      - "5001:3000"
+    networks:
+      - tyk-ai-studio

@@ -49,3 +49,8 @@ credentials.txt
 secrets.txt
 bootstrap-credentials.txt
 
+
+# AI Studio chart checkout (kubernetes/helm-ai-studio)
+kubernetes/helm-ai-studio/ai-studio/
+kubernetes/helm-ai-studio/studio-extra.env
+kubernetes/helm-ai-studio/grpc-tls/

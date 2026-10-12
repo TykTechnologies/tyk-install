@@ -1,0 +1,32 @@
+# Production settings overlay (reference architecture). Layer on top of values.yaml:
+#   --values values.yaml --values values-production.yaml --post-renderer ./post-render.sh
+#
+# Requires (see README "Production Settings"):
+#   - Secret tyk-ai-studio-grpc-tls (tls.crt / tls.key) for the gRPC control connection
+#   - ConfigMap tyk-ai-studio-extra from studio-extra.env (GRPC_TLS_*_PATH, CORS, plugins)
+#   - Secret tyk-ai-studio-extra with CSRF_KEY and METRICS_AUTH_TOKEN
+
+config:
+  grpcTlsInsecure: "false" # AI Studio serves gRPC with TLS
+
+microgateway:
+  config:
+    tlsEnabled: "true" # Edge Gateway dials AI Studio with TLS
+    allowInsecure: "false"
+  metrics:
+    # /metrics on the Edge Gateway needs the bearer token set below.
+    # bearerTokenSecret is what a ServiceMonitor (if enabled) scrapes with.
+    allowUnauthenticated: false
+    bearerTokenSecret:
+      name: tyk-ai-studio-extra
+      key: METRICS_AUTH_TOKEN
+  extraEnv:
+    - name: METRICS_AUTH_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: tyk-ai-studio-extra
+          key: METRICS_AUTH_TOKEN
+    - name: EDGE_TLS_CA_PATH
+      value: /opt/tyk-microgateway/certs/grpc/tls.crt
+    - name: EDGE_TLS_SERVER_NAME
+      value: tyk-ai-studio

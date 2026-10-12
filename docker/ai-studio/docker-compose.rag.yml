@@ -1,0 +1,36 @@
+# Optional RAG helpers: Reranker and Transformer Server.
+#   docker compose -f docker-compose.yml -f docker-compose.rag.yml up -d
+#
+# Both images only publish a "latest" tag. They download their models from
+# Hugging Face on first use; the cache volumes keep them across restarts.
+# AI Studio does not call them on its own. Use the Transformer Server as a
+# standalone Embedder (OpenAI compatibility, endpoint http://transformer-server:8000/v1).
+
+services:
+  reranker:
+    restart: unless-stopped
+    image: tykio/reranker_cpu:latest
+    container_name: tyk-ai-reranker
+    ports:
+      - "8081:80" # POST /rerank (model BAAI/bge-reranker-large, ~2 GB RAM)
+    volumes:
+      - reranker-cache:/root/.cache/huggingface
+    networks:
+      - tyk-ai-studio
+
+  transformer-server:
+    restart: unless-stopped
+    image: tykio/transformer_server_cpu:latest
+    container_name: tyk-ai-transformer-server
+    ports:
+      - "8082:8000" # POST /v1/embeddings (any sentence-transformers model)
+    volumes:
+      - transformer-cache:/root/.cache
+    networks:
+      - tyk-ai-studio
+
+volumes:
+  reranker-cache:
+    name: tyk-ai-studio-reranker-cache
+  transformer-cache:
+    name: tyk-ai-studio-transformer-cache

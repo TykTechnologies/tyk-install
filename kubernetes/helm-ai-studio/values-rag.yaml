@@ -1,0 +1,34 @@
+# Optional RAG helpers: Reranker and Transformer Server (chart subcharts).
+# Layer on top of values.yaml:
+#   --values values.yaml --values values-rag.yaml
+#
+# Both images only publish a "latest" tag and download their models from
+# Hugging Face on first use (no persistent cache). AI Studio does not call them
+# on its own. Use the Transformer Server as a standalone Embedder
+# (OpenAI compatibility, endpoint http://tyk-ai-studio-transformer:8000/v1).
+
+reranker:
+  enabled: true
+  image:
+    repository: tykio/reranker_cpu # chart default midsommar/reranker does not exist
+    tag: latest
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi # BAAI/bge-reranker-large uses ~2.5 GiB
+
+transformer-server:
+  enabled: true
+  image:
+    repository: tykio/transformer_server_cpu # chart default midsommar/transformer-server does not exist
+    tag: latest
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
