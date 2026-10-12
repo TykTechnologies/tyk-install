@@ -141,13 +141,13 @@ for example `ChangeMe123!`.
 
 1. Install cert-manager:
 
-```bash
-helm install cert-manager oci://quay.io/jetstack/charts/cert-manager \
-  --version v1.21.2 \
-  --namespace cert-manager \
-  --create-namespace \
-  --set crds.enabled=true
-```
+   ```bash
+   helm install cert-manager oci://quay.io/jetstack/charts/cert-manager \
+     --version v1.21.2 \
+     --namespace cert-manager \
+     --create-namespace \
+     --set crds.enabled=true
+   ```
 
 2. Create a `ClusterIssuer` named `letsencrypt-prod` (or change `certManager.issuer` in
    `values-ingress.yaml`). See the [cert-manager ACME docs](https://cert-manager.io/docs/configuration/acme/).
@@ -253,25 +253,25 @@ set.
    certificate from the same Secret. With your own CA, put the CA in a separate file and adjust
    `EDGE_TLS_CA_PATH`.
 
-```bash
-mkdir -p grpc-tls
-openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 \
-  -subj "/CN=tyk-ai-studio" \
-  -addext "subjectAltName=DNS:tyk-ai-studio,DNS:tyk-ai-studio.tyk-ai.svc,DNS:tyk-ai-studio.tyk-ai.svc.cluster.local" \
-  -keyout grpc-tls/tls.key -out grpc-tls/tls.crt
+   ```bash
+   mkdir -p grpc-tls
+   openssl req -x509 -newkey rsa:4096 -sha256 -nodes -days 365 \
+     -subj "/CN=tyk-ai-studio" \
+     -addext "subjectAltName=DNS:tyk-ai-studio,DNS:tyk-ai-studio.tyk-ai.svc,DNS:tyk-ai-studio.tyk-ai.svc.cluster.local" \
+     -keyout grpc-tls/tls.key -out grpc-tls/tls.crt
 
-kubectl create secret tls tyk-ai-studio-grpc-tls -n tyk-ai \
-  --cert=grpc-tls/tls.crt --key=grpc-tls/tls.key
-```
+   kubectl create secret tls tyk-ai-studio-grpc-tls -n tyk-ai \
+     --cert=grpc-tls/tls.crt --key=grpc-tls/tls.key
+   ```
 
 2. Create the Secret for sensitive settings. `METRICS_AUTH_TOKEN` is needed on both AI Studio and
    the Edge Gateway; `CSRF_KEY` keeps logins valid across restarts.
 
-```bash
-kubectl create secret generic tyk-ai-studio-extra -n tyk-ai \
-  --from-literal=CSRF_KEY=$(openssl rand -hex 16) \
-  --from-literal=METRICS_AUTH_TOKEN=$(openssl rand -hex 16)
-```
+   ```bash
+   kubectl create secret generic tyk-ai-studio-extra -n tyk-ai \
+     --from-literal=CSRF_KEY=$(openssl rand -hex 16) \
+     --from-literal=METRICS_AUTH_TOKEN=$(openssl rand -hex 16)
+   ```
 
 3. Set `CORS_ALLOWED_ORIGINS` in `studio-extra.env` to the AI Studio URL, keep the production
    section, and create the ConfigMap.
