@@ -24,7 +24,7 @@ cd ../getting-started
 bash start.sh
 ```
 
-Log in to Tyk Dashboard at http://localhost:3000 with `developer@tyk.io` / `specialpassword`. For the full walkthrough, see the [Tyk Self-Managed quick start](https://tyk.io/docs/getting-started/quick-start).
+Log in to Tyk Dashboard at `http://localhost:3000` with `developer@tyk.io` / `specialpassword`. For the full walkthrough, see the [Tyk Self-Managed quick start](https://tyk.io/docs/getting-started/quick-start).
 
 Or choose a deployment:
 
