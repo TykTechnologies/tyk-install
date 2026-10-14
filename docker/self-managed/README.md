@@ -39,10 +39,10 @@ TYK_LICENSE_KEY = eyJhbGciOiJSUzI1NiIsInR5cCI6...
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # Verify services are running
-docker-compose ps
+docker compose ps
 ```
 
 **Expected containers:**
@@ -58,10 +58,10 @@ Wait for all health checks to pass (~30-60 seconds):
 
 ```bash
 # Watch container status
-docker-compose ps
+docker compose ps
 
 # Check logs if needed
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ---
@@ -83,7 +83,7 @@ cd tyk-Install/utils/bootstrap
 
 # You will need to set env vars before running. Check the Bootstrap README
 # Run the bootstrap script docker tools profile
-docker-compose --profile tools run --rm tyk-bootstrap
+docker compose --profile tools run --rm tyk-bootstrap
 
 # Run the bootstrap script directly
 ./bootstrap.sh
@@ -342,7 +342,7 @@ export DASHBOARD_API_KEY="<from_System_Management_Users>"
 docker run --rm \
   --network tyk \
   -v $(pwd):/app \
-  tykio/tyk-sync:v2.1 \
+  tykio/tyk-sync:v2.2.2 \
   dump \
   --dashboard http://tyk-dashboard:3000 \
   --secret ${DASHBOARD_API_KEY} \
@@ -365,7 +365,7 @@ vi backup/<api-file>.json
 docker run --rm \
   --network tyk \
   -v $(pwd):/app \
-  tykio/tyk-sync:v2.1 \
+  tykio/tyk-sync:v2.2.2 \
   sync \
   --dashboard http://tyk-dashboard:3000 \
   --secret ${DASHBOARD_API_KEY} \
@@ -391,13 +391,13 @@ docker run --rm \
 
 ```bash
 # Stop all services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (DELETES ALL DATA)
-docker-compose down -v
+docker compose down -v
 
 # Full cleanup including networks
-docker-compose down -v --remove-orphans
+docker compose down -v --remove-orphans
 docker network prune -f
 ```
 
@@ -426,8 +426,8 @@ Set `PORTAL_DISABLECSRFCHECK=true` in `confs/portal.env`. This is needed when ac
 
 ## Resources
 
-- [Installation Documentation](https://tyk.io/docs/tyk-self-managed/docker)
-- [Tyk Dashboard API](https://tyk.io/docs/tyk-dashboard-api/)
+- [Installation Documentation](https://tyk.io/docs/tyk-self-managed/install)
+- [Tyk Dashboard API](https://tyk.io/docs/tyk-dashboard-api)
 - [Developer Portal](https://tyk.io/docs/portal/overview/getting-started)
 - [Tyk Sync](https://tyk.io/docs/api-management/sync/use-cases)
 - [Release Notes](https://tyk.io/docs/developer-support/release-notes/overview)

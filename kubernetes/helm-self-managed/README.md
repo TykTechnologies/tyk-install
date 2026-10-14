@@ -1025,7 +1025,7 @@ kubectl delete namespace cert-manager
 
 ## Resources
 
-- [Installation Documentation](https://tyk.io/docs/tyk-self-managed/install#install-on-kubernetes)
-- [Tyk Dashboard API](https://tyk.io/docs/tyk-dashboard-api/)
+- [Installation Documentation](https://tyk.io/docs/tyk-self-managed/install/kubernetes)
+- [Tyk Dashboard API](https://tyk.io/docs/tyk-dashboard-api)
 - [Tyk Operator](https://tyk.io/docs/api-management/automations/operator)
 - [How-TO Articles](https://support.tyk.io/hc/en-gb)

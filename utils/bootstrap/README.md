@@ -51,7 +51,7 @@ TYK_LICENSE_KEY=your-license-key-here
 
 ```bash
 # Using the tools profile (recommended)
-docker-compose --profile tools run --rm tyk-bootstrap
+docker compose --profile tools run --rm tyk-bootstrap
 
 # Alternative: Direct docker compose run
 docker compose run --rm tyk-bootstrap
@@ -119,7 +119,7 @@ Bootstrap is **idempotent** - safe to run multiple times:
 
 ```bash
 # Loads existing credentials from file
-docker-compose --profile tools run --rm tyk-bootstrap
+docker compose --profile tools run --rm tyk-bootstrap
 ```
 
 **Force fresh bootstrap** (only if you want to skip checks):
@@ -129,7 +129,7 @@ docker-compose --profile tools run --rm tyk-bootstrap
 rm -rf bootstrap-output/
 
 # Run bootstrap again
-docker-compose --profile tools run --rm tyk-bootstrap
+docker compose --profile tools run --rm tyk-bootstrap
 ```
 
 ## 🧪 What Gets Created
@@ -194,16 +194,16 @@ rm -rf bootstrap-output/
 
 ```bash
 # Stop all services and remove volumes
-docker-compose down -v
+docker compose down -v
 
 # Remove bootstrap data
 rm -rf bootstrap-output/
 
 # Start services
-docker-compose up -d
+docker compose up -d
 
 # Re-run bootstrap
-docker-compose --profile tools run --rm tyk-bootstrap
+docker compose --profile tools run --rm tyk-bootstrap
 ```
 
 ## 🔧 Customization
@@ -245,10 +245,10 @@ Edit `bootstrap.sh` to customize:
 
 ```bash
 # Check Dashboard is running
-docker-compose ps tyk-dashboard
+docker compose ps tyk-dashboard
 
 # Check Dashboard logs
-docker-compose logs tyk-dashboard
+docker compose logs tyk-dashboard
 
 # Test Dashboard health endpoint
 curl http://localhost:3000/hello
@@ -279,14 +279,14 @@ curl http://localhost:3000/admin/organisations/ \
 rm bootstrap-output/.bootstrap_completed
 
 # Re-run bootstrap
-docker-compose --profile tools run --rm tyk-bootstrap
+docker compose --profile tools run --rm tyk-bootstrap
 ```
 
 **Credentials file not created:**
 
 ```bash
 # Check volume mount
-docker-compose run --rm tyk-bootstrap ls -la /bootstrap-output
+docker compose run --rm --entrypoint ls tyk-bootstrap -la /bootstrap-output
 
 # Check local directory
 ls -la bootstrap-output/
@@ -363,8 +363,8 @@ curl http://localhost:3000/api/keys \
 
 ## 🔗 Resources
 
-- [Tyk Dashboard API Documentation](https://tyk.io/docs/tyk-dashboard-api/)
-- [Organization Management](https://tyk.io/docs/tyk-apis/tyk-dashboard-admin-api/organisations/)
-- [OpenAPI Specification](https://tyk.io/docs/getting-started/using-oas-definitions/)
-- [Developer Portal Setup](https://tyk.io/docs/tyk-developer-portal/)
-- [API Key Management](https://tyk.io/docs/basic-config-and-security/security/authentication-authorization/)
+- [Tyk Dashboard API Documentation](https://tyk.io/docs/tyk-dashboard-api)
+- [Organization Management](https://tyk.io/docs/dashboard-admin-api)
+- [OpenAPI Specification](https://tyk.io/docs/api-management/gateway-config-managing-oas)
+- [Developer Portal Setup](https://tyk.io/docs/portal/overview/intro)
+- [API Key Management](https://tyk.io/docs/api-management/client-authentication)
