@@ -86,12 +86,10 @@ bash bootstrap.sh
 | Variable          | Default                     | Required | Description                     |
 | ----------------- | --------------------------- | -------- | ------------------------------- |
 | `TYK_LICENSE_KEY` | -                           | ✅       | Tyk Dashboard license key       |
-| `DASHBOARD_URL`   | `http://localhost:3000`     | -        | Dashboard URL                   |
-| `GATEWAY_URL`     | `http://localhost:8080`     | -        | Gateway URL                     |
-| `PORTAL_URL`      | `http://localhost:3001`     | -        | Developer Portal URL (optional) |
-| `ADMIN_SECRET`    | `admin-secret`              | -        | Dashboard admin API secret      |
-
-The defaults apply when you run `bootstrap.sh` on your host. The Docker Compose service sets the URLs to the container names (`http://tyk-dashboard:3000`, `http://tyk-gateway:8080`, `http://tyk-portal:3001`).
+| `DASHBOARD_URL`   | `http://tyk-dashboard:3000` | ✅       | Dashboard URL                   |
+| `GATEWAY_URL`     | `http://tyk-gateway:8080`   | ✅       | Gateway URL                     |
+| `PORTAL_URL`      | `http://tyk-portal:3001`    | ⚠️       | Developer Portal URL (optional) |
+| `ADMIN_SECRET`    | `admin-secret`              | ✅       | Dashboard admin API secret      |
 
 **Note**: Portal bootstrapping is optional. If Portal is not running, the script will skip portal configuration and continue.
 

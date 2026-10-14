@@ -81,11 +81,12 @@ Use the Bootstrap Utility for automated setup. See **[Bootstrap Utility README](
 git clone https://github.com/TykTechnologies/tyk-Install.git
 cd tyk-Install/utils/bootstrap
 
-# Set TYK_LICENSE_KEY in utils/bootstrap/.env, then run the bootstrap with the tools profile
+# You will need to set env vars before running. Check the Bootstrap README
+# Run the bootstrap script docker tools profile
 docker compose --profile tools run --rm tyk-bootstrap
 
-# Or run the script directly on your host (needs bash and curl)
-TYK_LICENSE_KEY=<your-license-key> ./bootstrap.sh
+# Run the bootstrap script directly
+./bootstrap.sh
 
 ```
 
