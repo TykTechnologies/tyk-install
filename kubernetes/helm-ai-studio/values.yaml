@@ -1,0 +1,71 @@
+# Tyk AI Studio 2.2.1 - values for the `midsommar` chart in TykTechnologies/ai-studio (helm/)
+#
+# Community Edition, AI Studio (control plane) + Edge Gateway (data plane) + internal PostgreSQL.
+# Secrets are passed with --set from .env (see README), never stored here.
+# Layer values-enterprise.yaml for Enterprise images and values-ingress.yaml for Ingress + TLS.
+
+# Names every AI Studio resource "tyk-ai-studio" (service, configmap, postgres, ...).
+# Install the release as "tyk-ai-studio" too: the Edge Gateway dials "<release>:50051"
+# and AI Studio proxies to "<release>-microgateway:8080".
+fullnameOverride: tyk-ai-studio
+
+midsommar:
+  image:
+    repository: tykio/tyk-ai-studio # Enterprise: tykio/tyk-ai-studio-ent
+    tag: v2.2.1
+  ingress:
+    enabled: false
+  service:
+    type: ClusterIP
+    ports:
+      - name: http # Admin UI + REST API
+        port: 8080
+        targetPort: 8080
+      - name: gateway # Embedded AI Gateway
+        port: 9090
+        targetPort: 9090
+      - name: grpc # Control server for Edge Gateways
+        port: 50051
+        targetPort: 50051
+
+config:
+  allowRegistrations: "true"
+  # Port-forward URLs. Change to your external URLs when using Ingress.
+  siteUrl: "http://localhost:8080"
+  toolDisplayUrl: "http://localhost:9091"
+  datasourceDisplayUrl: "http://localhost:9091"
+  fromEmail: "noreply@example.com"
+  devMode: "true" # Required for login over plain HTTP. Set "false" behind HTTPS.
+  databaseType: "postgres"
+  ociCacheDir: "./data/cache/plugins" # Required for the plugin marketplace
+  ociRequireSignature: "false" # cosign is not available in distroless images
+  gatewayMode: "control"
+  grpcPort: "50051"
+  grpcHost: "0.0.0.0"
+  grpcTlsInsecure: "true"
+  # proxyUrl auto-resolves to the in-cluster Edge Gateway service
+  # Set with --set: tykAiSecretKey, grpcAuthToken, microgatewayEncryptionKey, tykAiLicense
+
+database:
+  internal: true
+  user: "tykuser"
+  name: "tyk_ai_studio"
+  # Set with --set: password
+
+postgres:
+  persistence:
+    enabled: true
+    size: 5Gi
+
+microgateway:
+  enabled: true
+  image:
+    repository: tykio/tyk-microgateway # Enterprise: tykio/tyk-microgateway-ent
+    tag: v2.2.1
+  service:
+    type: ClusterIP
+    port: 8080
+  config:
+    # EDGE_ID is set per pod from the pod name
+    edgeNamespace: "default"
+  # Set with --set: secrets.edgeAuthToken, secrets.encryptionKey, secrets.tykAiLicense

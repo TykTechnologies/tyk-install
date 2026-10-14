@@ -1,0 +1,13 @@
+# Enterprise Edition overlay. Layer on top of values.yaml:
+#   --values values.yaml --values values-enterprise.yaml
+# Pass the license with --set (see README); it is required before the first start.
+
+midsommar:
+  image:
+    repository: tykio/tyk-ai-studio-ent
+    tag: v2.2.1
+
+microgateway:
+  image:
+    repository: tykio/tyk-microgateway-ent
+    tag: v2.2.1

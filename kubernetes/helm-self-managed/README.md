@@ -138,7 +138,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n tyk
 # Cluster admin privileges required for installing on RedHat OpenShift
 helm install \
   cert-manager oci://quay.io/jetstack/charts/cert-manager \
-  --version v1.17.4 \
+  --version v1.21.2 \
   --namespace cert-manager \
   --create-namespace \
   --set crds.enabled=true
