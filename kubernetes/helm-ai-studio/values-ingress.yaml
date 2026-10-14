@@ -1,0 +1,48 @@
+# Ingress + TLS overlay (NGINX Ingress Controller + cert-manager ClusterIssuer).
+# Layer on top of values.yaml:
+#   --values values.yaml --values values-ingress.yaml
+# Replace the hostnames and the issuer name with your own.
+
+midsommar:
+  ingress:
+    enabled: true
+    certificateEnabled: true
+    className: nginx
+    certManager:
+      issuer: letsencrypt-prod
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    hosts:
+      - host: studio.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+            port: 8080
+    tls:
+      - secretName: studio-tls
+        hosts:
+          - studio.example.com
+
+config:
+  siteUrl: "https://studio.example.com"
+  devMode: "false"
+  # Display URLs resolve from the Edge Gateway ingress host below
+  toolDisplayUrl: ""
+  datasourceDisplayUrl: ""
+
+microgateway:
+  ingress:
+    enabled: true
+    certificateEnabled: true
+    className: nginx
+    certManager:
+      issuer: letsencrypt-prod
+    hosts:
+      - host: gateway.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: gateway-tls
+        hosts:
+          - gateway.example.com

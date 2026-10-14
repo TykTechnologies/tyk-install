@@ -11,6 +11,7 @@ Required licenses depend on deployment type:
 - **Self-Managed**: Dashboard license, Portal license (optional)
 - **Hybrid**: Tyk Cloud account with MDCB credentials
 - **Operator**: Operator license
+- **AI Studio**: none for Community Edition, AI license for Enterprise Edition
 
 ## Quick Start
 
@@ -22,7 +23,7 @@ Choose your deployment:
 | ---------------- | --------------------------------------------------------------- | -------------------------------- |
 | **Self-Managed** | Full stack: Dashboard, Gateway, Portal, Pump, Redis, PostgreSQL | [README](./docker/self-managed/) |
 | **Hybrid**       | Data plane connecting to Tyk Cloud/MDCB: Gateway, Pump, Redis   | [README](./docker/hybrid/)       |
-| **AI Studio**    | AI Studio, Microgateway, analytics pulse, and PostgreSQL        | [README](./docker/ai-studio/)    |
+| **AI Studio**    | AI Studio 2.2, Edge Gateway, analytics pulse, and PostgreSQL    | [README](./docker/ai-studio/)    |
 
 ### Kubernetes (Helm)
 
@@ -30,6 +31,7 @@ Choose your deployment:
 | ---------------- | --------------------------------------- | ------------------------------------------- |
 | **Self-Managed** | Full stack using `tyk-stack` chart      | [README](./kubernetes/helm-self-managed/)   |
 | **Hybrid**       | Data plane using `tyk-data-plane` chart | [README](./kubernetes/helm-hybrid/)         |
+| **AI Studio**    | AI Studio 2.2, Edge Gateway, PostgreSQL | [README](./kubernetes/helm-ai-studio/)      |
 | **Operator**     | Standalone Tyk Operator                 | [README](./kubernetes/standalone-operator/) |
 
 Self-Managed and Hybrid both run on Red Hat OpenShift from tyk-charts 5.4.0 by layering their
@@ -67,6 +69,7 @@ tyk-install/
 ├── kubernetes/
 │   ├── helm-self-managed/ # Full stack Helm deployment
 │   ├── helm-hybrid/       # Hybrid data plane Helm deployment
+│   ├── helm-ai-studio/    # AI Studio Helm deployment
 │   └── standalone-operator/ # Tyk Operator deployment
 └── utils/
     └── bootstrap/         # Bootstrap automation utility
