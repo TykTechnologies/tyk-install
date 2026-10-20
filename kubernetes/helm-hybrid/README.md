@@ -4,7 +4,7 @@
 
 - Kubernetes cluster (EKS/GKE/AKS) running
 - kubectl configured and connected
-- Helm 3.12+ installed
+- Helm 3.12+ or Helm 4 installed
 - Tyk Control Plane (Tyk Cloud or Self-Managed MDCB) set up and running
 - MDCB connection credentials (Connection String, Organization ID, API Key, Group ID)
 

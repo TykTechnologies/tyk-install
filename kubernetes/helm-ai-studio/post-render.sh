@@ -8,7 +8,9 @@
 #   - Secret tyk-ai-studio-grpc-tls at /opt/tyk-ai-studio/certs/grpc (AI Studio)
 #     and its tls.crt at /opt/tyk-microgateway/certs/grpc (Edge Gateway)
 #
-# Usage: helm upgrade --install ... --post-renderer ./post-render.sh
+# Usage, Helm 3: helm upgrade --install ... --post-renderer ./post-render.sh
+# Usage, Helm 4: helm plugin install . (once), then --post-renderer tyk-ai-studio
+# Needs kubectl (for kustomize).
 set -euo pipefail
 
 tmp=$(mktemp -d)

@@ -1,0 +1,12 @@
+# Helm 4 post-renderer plugin running post-render.sh. Helm 4 takes a plugin name for
+# --post-renderer, Helm 3 a script path; see README.md.
+#   helm plugin install ./kubernetes/helm-ai-studio
+#   helm upgrade --install ... --post-renderer tyk-ai-studio
+apiVersion: v1
+type: postrenderer/v1
+name: tyk-ai-studio
+version: 1.0.0
+runtime: subprocess
+runtimeConfig:
+  platformCommand:
+    - command: ${HELM_PLUGIN_DIR}/post-render.sh

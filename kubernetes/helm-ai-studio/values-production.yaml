@@ -1,5 +1,6 @@
 # Production settings overlay (reference architecture). Layer on top of values.yaml:
 #   --values values.yaml --values values-production.yaml --post-renderer ./post-render.sh
+# (Helm 4: --post-renderer tyk-ai-studio, after helm plugin install .)
 #
 # Requires (see README "Production Settings"):
 #   - Secret tyk-ai-studio-grpc-tls (tls.crt / tls.key) for the gRPC control connection

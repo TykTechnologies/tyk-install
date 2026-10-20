@@ -9,7 +9,7 @@ Helm chart from the [Tyk AI Studio repository](https://github.com/TykTechnologie
 ## Prerequisites
 
 - Kubernetes cluster running, `kubectl` configured and connected
-- Helm 3.x and `git`
+- Helm 3 or Helm 4, and `git`
 - `openssl` to generate secrets
 - Enterprise Edition only: a Tyk AI license key
 - Ingress + TLS only: an Ingress controller and cert-manager
@@ -26,6 +26,7 @@ Helm chart from the [Tyk AI Studio repository](https://github.com/TykTechnologie
 | `values-production.yaml` | Optional: production settings (gRPC TLS, metrics token)              |
 | `studio-extra.env.example` | Optional: production settings the chart cannot set               |
 | `post-render.sh`         | Applies `studio-extra.env` and the gRPC TLS secret to the release    |
+| `plugin.yaml`            | Helm 4 plugin that runs `post-render.sh` (name: `tyk-ai-studio`)     |
 | `presidio.yaml`          | Optional: Microsoft Presidio for PII Guardrails (Enterprise)         |
 
 The optional pieces are described in [Optional Components](#optional-components).
@@ -183,10 +184,21 @@ gRPC certificate paths.
   its `tls.crt`)
 
 All three are optional, so the post-renderer is safe to use without them. It needs `kubectl`
-(for `kubectl kustomize`). To use it, add this to the install command:
+(for `kubectl kustomize`). To use it with Helm 3, add this to the install command:
 
 ```bash
   --post-renderer ./post-render.sh
+```
+
+Helm 4 does not run scripts as post-renderers, only plugins. Install this folder as a plugin once,
+then add its name to the install command instead:
+
+```bash
+helm plugin install .
+```
+
+```bash
+  --post-renderer tyk-ai-studio
 ```
 
 Create the ConfigMap from your copy of `studio-extra.env.example`. Remove the sections you do not
@@ -275,7 +287,8 @@ set.
 
 3. Set `CORS_ALLOWED_ORIGINS` in `studio-extra.env` to the AI Studio URL, keep the production
    section, and create the ConfigMap.
-4. Add `--values values-production.yaml --post-renderer ./post-render.sh` to the install command.
+4. Add `--values values-production.yaml --post-renderer ./post-render.sh` to the install command
+   (on Helm 4, `--post-renderer tyk-ai-studio` after `helm plugin install .`).
 
 AI Studio then logs `gRPC TLS enabled`, the Edge Gateway loads `EDGE_TLS_CA_PATH` and connects,
 and `/metrics` answers `401` without `Authorization: Bearer <METRICS_AUTH_TOKEN>`.
@@ -284,6 +297,9 @@ Also for production: use `values-ingress.yaml`, an external PostgreSQL, and neve
 `EDGE_SKIP_TLS_VERIFY` or `EDGE_ALLOW_INSECURE=true` on Edge Gateways.
 
 ### Everything Together
+
+On Helm 4, run `helm plugin install .` once and replace `--post-renderer ./post-render.sh` with
+`--post-renderer tyk-ai-studio` (see [The Post-Renderer](#the-post-renderer)).
 
 ```bash
 helm upgrade --install tyk-ai-studio ./ai-studio/helm \
@@ -361,3 +377,5 @@ All configuration is stored in PostgreSQL.
 helm uninstall tyk-ai-studio -n tyk-ai
 kubectl delete namespace tyk-ai
 ```
+
+On Helm 4, also remove the post-renderer plugin if you installed it: `helm plugin uninstall tyk-ai-studio`.

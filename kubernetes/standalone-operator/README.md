@@ -32,7 +32,7 @@ The Tyk Operator extends Kubernetes with custom resources for managing Tyk APIs:
 - **Existing Tyk Dashboard** (running and accessible)
 - Dashboard API credentials (User API Key + Org ID)
 - Kubernetes 1.19+
-- Helm 3.x
+- Helm 3 or Helm 4
 - kubectl configured
 
 ## 🚀 Installation
