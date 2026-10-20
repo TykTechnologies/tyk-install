@@ -4,7 +4,7 @@
 
 - Kubernetes cluster (EKS/GKE/AKS) running
 - kubectl configured and connected
-- Helm 3.12+ installed
+- Helm 3.12+ or Helm 4 installed
 - Tyk license key
 
 > **Red Hat OpenShift?** Follow the steps below, with the changes described in
