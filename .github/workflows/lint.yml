@@ -11,7 +11,7 @@ jobs:
     name: YAML Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install yamllint
         run: pip install yamllint
@@ -26,7 +26,7 @@ jobs:
     name: Shell Script Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
@@ -38,7 +38,7 @@ jobs:
     name: Markdown Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Lint Markdown files
         uses: DavidAnson/markdownlint-cli2-action@v19
@@ -50,7 +50,7 @@ jobs:
     name: Markdown Link Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check Markdown links
         uses: gaurav-nelson/github-action-markdown-link-check@v1
