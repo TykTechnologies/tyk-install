@@ -46,9 +46,7 @@
         "enabled": true,
         "securitySchemes": {
           "jwtAuth": {
-            "defaultPolicies": [
-              "6890a9253c32980001df0639"
-            ],
+            "defaultPolicies": [],
             "enabled": true,
             "header": {
               "enabled": true,
