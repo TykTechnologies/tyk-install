@@ -10,7 +10,7 @@ sleep 15
 echo "🛠️ Bootstrapping APIs and Portal..."
 docker run --rm \
   --network tyk \
-  -v $(pwd)/bootstrap:/bootstrap \
+  -v $(pwd)/bootstrap:/bootstrap:z \
   -w /bootstrap \
   ghcr.io/orange-opensource/hurl:latest \
   --very-verbose --http1.1 --test --variables-file variables.env bootstrap.hurl
