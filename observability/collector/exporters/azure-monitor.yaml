@@ -1,0 +1,24 @@
+# Azure Monitor / Application Insights, alongside the local stack.
+# For Azure Managed Prometheus (PromQL, so the Tyk dashboards work in Azure Managed
+# Grafana), use prometheus-remote-write.yaml with your workspace's ingestion endpoint.
+#
+#   APPLICATIONINSIGHTS_CONNECTION_STRING  from the Application Insights resource
+
+exporters:
+  azure_monitor/export:
+    connection_string: ${env:APPLICATIONINSIGHTS_CONNECTION_STRING}
+
+service:
+  pipelines:
+    metrics/export:
+      receivers: [otlp, span_metrics]
+      processors: [memory_limiter, batch]
+      exporters: [azure_monitor/export]
+    traces/export:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [azure_monitor/export]
+    logs/export:
+      receivers: [otlp, file_log/tyk]
+      processors: [memory_limiter, batch]
+      exporters: [azure_monitor/export]

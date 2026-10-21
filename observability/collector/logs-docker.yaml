@@ -1,0 +1,59 @@
+# Container logs of the Tyk services on Docker, read from Docker's json-file logs.
+# Needs /var/lib/docker/containers mounted read-only, the collector running as root
+# (the files are root-owned), and the Tyk services logging with
+#   logging.options.labels: com.docker.compose.service
+# which docker-compose.otel.yml sets. Logs of every other container are dropped.
+
+receivers:
+  file_log/tyk:
+    include: [/var/lib/docker/containers/*/*-json.log]
+    start_at: end
+    operators:
+      - type: container
+        format: docker
+        # Docker's paths carry no Kubernetes metadata
+        add_metadata_from_filepath: false
+      # Keep the Tyk services only.
+      - type: filter
+        expr: 'attributes.attrs == nil or attributes.attrs["com.docker.compose.service"] == nil or not (attributes.attrs["com.docker.compose.service"] matches "^tyk-(gateway|dashboard|pump|portal|mdcb)$")'
+      - type: copy
+        from: attributes.attrs["com.docker.compose.service"]
+        to: resource["service.name"]
+      - type: remove
+        field: attributes.attrs
+      # Tyk logs JSON lines (TYK_GW_LOGFORMAT=json): fields land under tyk.*, which
+      # Loki exposes as tyk_level, tyk_api_id, tyk_trace_id, ...
+      - type: json_parser
+        parse_from: body
+        parse_to: attributes.tyk
+        if: 'body matches "^\\s*\\{"'
+        on_error: send_quiet
+        timestamp:
+          parse_from: attributes.tyk.time
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05Z07:00'
+        severity:
+          parse_from: attributes.tyk.level
+          mapping:
+            warn: warning
+      # The log message becomes the body.
+      - type: move
+        from: attributes.tyk.message
+        to: body
+        if: 'attributes.tyk != nil and attributes.tyk.message != nil and attributes.tyk.message != ""'
+      # Access logs have an empty message: give them a readable body.
+      - type: add
+        field: body
+        value: EXPR(attributes.tyk.method + " " + attributes.tyk.original_path + " " + string(attributes.tyk.status) + " " + attributes.tyk.api_name)
+        if: 'attributes.tyk != nil and attributes.tyk.prefix == "access-log" and attributes.tyk.method != nil and attributes.tyk.original_path != nil and attributes.tyk.status != nil and attributes.tyk.api_name != nil'
+      - type: remove
+        field: attributes.tyk.message
+        if: 'attributes.tyk != nil and attributes.tyk.message != nil'
+      - type: add
+        field: resource["service.namespace"]
+        value: tyk
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp, file_log/tyk]
