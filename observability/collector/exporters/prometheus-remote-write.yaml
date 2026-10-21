@@ -1,0 +1,22 @@
+# Any Prometheus remote-write backend, alongside the local stack: Grafana Mimir,
+# Grafana Cloud Metrics, Thanos Receive, Cortex, VictoriaMetrics, Chronosphere, ...
+# The metric and label names match the local Prometheus, so the Tyk dashboards and
+# alert rules work against it unchanged.
+#
+#   PROMETHEUS_REMOTE_WRITE_ENDPOINT  e.g. https://mimir.example.com/api/v1/push
+#   PROMETHEUS_REMOTE_WRITE_HEADERS   auth headers as a JSON map, e.g. {"Authorization":"Bearer <token>"}
+
+exporters:
+  prometheus_remote_write/export:
+    endpoint: ${env:PROMETHEUS_REMOTE_WRITE_ENDPOINT}
+    headers: ${env:PROMETHEUS_REMOTE_WRITE_HEADERS}
+    # Every resource attribute becomes a label, as in the local Prometheus
+    resource_constant_labels:
+      included: ["*"]
+
+service:
+  pipelines:
+    metrics/export:
+      receivers: [otlp, span_metrics]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus_remote_write/export]

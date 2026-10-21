@@ -1,0 +1,148 @@
+---
+# Alert rules for Tyk Gateway (data plane).
+#
+# Gateways push OTLP metrics to the OpenTelemetry Collector, and Prometheus
+# scrapes them from the collector's Prometheus exporter. Every resource attribute
+# becomes a label: service_name, service_instance_id, tyk_gw_id, tyk_gw_group_id, ...
+#
+# Every alert carries:
+#   severity  - critical (page), warning (ticket / business hours), info (FYI)
+#   tyk_component - gateway
+# and a "dashboard" annotation pointing to the Grafana dashboard to start from.
+#
+# service_name="tyk-gateway" is the Gateway's default OpenTelemetry resource name.
+# If you set TYK_GW_OPENTELEMETRY_RESOURCENAME, change it here too.
+# Response-flag alerts need the tyk.response_flag dimension on
+# http.server.request.duration (in observability/env/gateway.env by default).
+# Thresholds are defaults; tune them per estate.
+
+groups:
+  - name: tyk-gateway
+    rules:
+
+      # 5xx share of an API's traffic. Ignores APIs under ~0.1 req/s so a single
+      # failed request does not page.
+      - alert: TykGatewayHighErrorRate
+        expr: |-
+          (
+            sum by (service_name, tyk_api_id) (rate(tyk_api_requests_total{service_name="tyk-gateway", http_response_status_code=~"5.."}[5m]))
+            /
+            sum by (service_name, tyk_api_id) (rate(tyk_api_requests_total{service_name="tyk-gateway"}[5m]))
+          ) > 0.10
+          and
+          sum by (service_name, tyk_api_id) (rate(tyk_api_requests_total{service_name="tyk-gateway"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          tyk_component: gateway
+        annotations:
+          summary: "5xx error rate above 10% for API {{ $labels.tyk_api_id }}"
+          description: "{{ $value | humanizePercentage }} of requests to API {{ $labels.tyk_api_id }} returned 5xx over the last 5 minutes. The response flag breakdown on the API Troubleshooting dashboard shows whether the Gateway or the upstream produced them."
+          dashboard: /d/tyk-api-troubleshooting
+
+      # Ignores APIs under ~0.1 req/s, where a couple of slow requests set the p95.
+      - alert: TykGatewayHighLatency
+        expr: |-
+          histogram_quantile(0.95,
+            sum by (service_name, tyk_api_id, le) (rate(http_server_request_duration_seconds_bucket{service_name="tyk-gateway"}[5m]))
+          ) > 1
+          and
+          sum by (service_name, tyk_api_id) (rate(http_server_request_duration_seconds_count{service_name="tyk-gateway"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          tyk_component: gateway
+        annotations:
+          summary: "p95 latency above 1s for API {{ $labels.tyk_api_id }}"
+          description: "p95 end-to-end latency of API {{ $labels.tyk_api_id }} is {{ $value | humanizeDuration }}. If tyk_gateway_request_duration_seconds stays low, the time is spent in the upstream."
+          dashboard: /d/tyk-api-troubleshooting
+
+      # AMF: auth header missing, AKI: key invalid.
+      - alert: TykGatewayAuthFailureSurge
+        expr: |-
+          sum by (service_name, tyk_api_id) (rate(http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_response_flag=~"AMF|AKI"}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          tyk_component: gateway
+        annotations:
+          summary: "Authentication failures above 6/min for API {{ $labels.tyk_api_id }}"
+          description: "Missing (AMF) or invalid (AKI) credentials at {{ printf `%.2f` $value }} req/s. One client IP usually means a misconfigured client; many IPs suggest credential stuffing."
+          dashboard: /d/tyk-api-troubleshooting
+
+      # QEX: quota exceeded.
+      - alert: TykGatewayQuotaExhausted
+        expr: |-
+          sum by (service_name, tyk_api_id) (rate(http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_response_flag="QEX"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: info
+          tyk_component: gateway
+        annotations:
+          summary: "Consumers hitting their quota on API {{ $labels.tyk_api_id }}"
+          description: "Requests are rejected because a key's quota is used up. The API Portfolio dashboard shows which keys; raise their quota or move them to another policy."
+          dashboard: /d/tyk-api-portfolio
+
+      # RLT: rate limited.
+      - alert: TykGatewayRateLimited
+        expr: |-
+          sum by (service_name, tyk_api_id) (rate(http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_response_flag="RLT"}[5m])) > 0
+        for: 1m
+        labels:
+          severity: info
+          tyk_component: gateway
+        annotations:
+          summary: "Rate limit rejections on API {{ $labels.tyk_api_id }}"
+          description: "Requests are rejected by the rate limiter. If the rejections grow with the request rate, clients may be retrying 429s without backoff."
+          dashboard: /d/tyk-api-portfolio
+
+      # URS: upstream returned 5xx. Share of the API's traffic, so occasional upstream
+      # errors on a busy API do not page; ignores APIs under ~0.1 req/s.
+      - alert: TykGatewayUpstreamErrors
+        expr: |-
+          (
+            sum by (service_name, tyk_api_id) (rate(http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_response_flag="URS"}[5m]))
+            /
+            sum by (service_name, tyk_api_id) (rate(http_server_request_duration_seconds_count{service_name="tyk-gateway"}[5m]))
+          ) > 0.10
+          and
+          sum by (service_name, tyk_api_id) (rate(http_server_request_duration_seconds_count{service_name="tyk-gateway"}[5m])) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+          tyk_component: gateway
+        annotations:
+          summary: "Upstream returning 5xx for API {{ $labels.tyk_api_id }}"
+          description: "{{ $value | humanizePercentage }} of requests to API {{ $labels.tyk_api_id }} got a 5xx from the upstream (URS) for 3 minutes. The Gateway's access logs carry the upstream address."
+          dashboard: /d/tyk-api-troubleshooting
+
+      - alert: TykGatewayGoroutineGrowth
+        expr: |-
+          go_goroutine_count{service_name="tyk-gateway"} > 5000
+        for: 10m
+        labels:
+          severity: warning
+          tyk_component: gateway
+        annotations:
+          summary: "Goroutine count above 5000 on gateway {{ $labels.tyk_gw_id }}"
+          description: "{{ $value }} goroutines for 10 minutes. A healthy Gateway under moderate load runs 500-2000; a steady climb points to a leak. Capture a goroutine profile with the http_profiler."
+          dashboard: /d/tyk-gateway-fleet-health
+
+      # A failed sync from the Dashboard or MDCB, or an accidental bulk delete. Compared with the
+      # gateway's peak over the last 15 minutes, so it keeps firing while the APIs are missing
+      # (and for 15 minutes after an intended bulk delete).
+      - alert: TykGatewayApisLoadedDrop
+        expr: |-
+          (
+            tyk_gateway_apis_loaded{service_name="tyk-gateway"}
+            - max_over_time(tyk_gateway_apis_loaded{service_name="tyk-gateway"}[15m])
+          )
+          / (max_over_time(tyk_gateway_apis_loaded{service_name="tyk-gateway"}[15m]) > 0)
+          < -0.1
+        labels:
+          severity: critical
+          tyk_component: gateway
+        annotations:
+          summary: "Gateway {{ $labels.tyk_gw_id }} lost more than 10% of its APIs"
+          description: "Its loaded API definitions changed by {{ $value | humanizePercentage }} against its peak in the last 15 minutes. Check the Gateway's logs for config sync errors."
+          dashboard: /d/tyk-gateway-fleet-health

@@ -1,0 +1,83 @@
+# OpenTelemetry Collector for Tyk: receives OTLP from every Tyk component and sends
+#   metrics -> Prometheus exporter on :8889, scraped by Prometheus
+#   traces  -> Tempo (OTLP), and request rate / latency per span (span_metrics) to the metrics pipeline
+#   logs    -> Loki (OTLP), plus container logs from the platform file (logs-docker.yaml / logs-kubernetes.yaml)
+#
+# Loaded with a platform file and an optional exporter file, merged in order:
+#   --config=config.yaml --config=logs-<platform>.yaml --config=exporters/<name>.yaml
+# Backend addresses come from the environment, with the Docker service names as defaults.
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # PROD: keep the collector's memory limit (container / pod) set, this works as a share of it
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+  batch:
+
+exporters:
+  # Every resource attribute (service.name, service.instance.id, control_plane_id,
+  # tyk.gw.id, ...) becomes a label, the same way the Tyk components' metric tests
+  # read them. Series a component stops sending are dropped after metric_expiration.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    resource_constant_labels:
+      included: ["*"]
+    metric_expiration: 2m
+    enable_open_metrics: true
+  otlp_grpc/tempo:
+    endpoint: ${env:TEMPO_OTLP_ENDPOINT:-tempo:4317}
+    tls:
+      # PROD: TLS between the collector and Tempo when they are on different hosts
+      insecure: true
+  otlp_http/loki:
+    endpoint: ${env:LOKI_OTLP_ENDPOINT:-http://loki:3100/otlp}
+
+connectors:
+  # Request rate and latency per span name and API, from the traces: the MCP Metrics
+  # dashboard's trace panels. Follows the trace sampling rate.
+  # PERFORMANCE: one series set per service, span name and API; drop it if unused
+  span_metrics:
+    dimensions:
+      - name: tyk.api.id
+        default: ""
+    # Stop emitting series of a gateway that is gone (default: never); matches metric_expiration
+    metrics_expiration: 2m
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [otlp, span_metrics]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_grpc/tempo, span_metrics]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/loki]
+  telemetry:
+    # The collector's own metrics on :8888, scraped by Prometheus
+    metrics:
+      level: normal
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888

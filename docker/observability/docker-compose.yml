@@ -1,0 +1,134 @@
+# Observability stack for Tyk: OpenTelemetry Collector, Prometheus, Alertmanager, Tempo, Loki and Grafana.
+# Not meant to run on its own: docker/self-managed/docker-compose.otel.yml and
+# docker/hybrid/docker-compose.otel.yml include it and point the Tyk components at the collector.
+# Dashboards, alert rules and collector config live in ../../observability, shared with Kubernetes.
+# The services use the project's default network; the overlays attach the Tyk services to it too,
+# so the deployments' own networks are left as they are.
+
+services:
+  otel-collector:
+    restart: unless-stopped
+    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-0.162.0}
+    container_name: tyk-otel-collector
+    # Root, to read Docker's container log files (root-owned). PROD: drop logs-docker.yaml and the
+    # /var/lib/docker/containers mount to run as the image's non-root user, and ship logs another way
+    user: "0:0"
+    command:
+      - --config=/etc/otelcol/config.yaml
+      - --config=/etc/otelcol/logs-docker.yaml
+      # Extra backend: none, otlp, prometheus-remote-write, datadog, azure-monitor, google-cloud or aws
+      - --config=/etc/otelcol/exporters/${OTEL_COLLECTOR_EXPORTER:-none}.yaml
+    environment:
+      # Read by the exporter selected with OTEL_COLLECTOR_EXPORTER; see observability/collector/exporters
+      OTLP_EXPORT_ENDPOINT: ${OTLP_EXPORT_ENDPOINT:-}
+      OTLP_EXPORT_HEADERS: ${OTLP_EXPORT_HEADERS:-}
+      PROMETHEUS_REMOTE_WRITE_ENDPOINT: ${PROMETHEUS_REMOTE_WRITE_ENDPOINT:-}
+      PROMETHEUS_REMOTE_WRITE_HEADERS: ${PROMETHEUS_REMOTE_WRITE_HEADERS:-}
+      DD_API_KEY: ${DD_API_KEY:-}
+      DD_SITE: ${DD_SITE:-}
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AMP_REMOTE_WRITE_URL: ${AMP_REMOTE_WRITE_URL:-}
+      CLOUDWATCH_LOG_GROUP: ${CLOUDWATCH_LOG_GROUP:-}
+    volumes:
+      - ../../observability/collector:/etc/otelcol:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    ports:
+      # OTLP for components outside this compose project (e.g. an MDCB). PROD: firewall it, or add TLS
+      - "4317:4317"
+      - "4318:4318"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  prometheus:
+    restart: unless-stopped
+    image: quay.io/prometheus/prometheus:${PROMETHEUS_VERSION:-v3.15.0}
+    container_name: tyk-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # PROD: size retention to your disk, or remote-write to long-term storage
+      - --storage.tsdb.retention.time=7d
+      # Links from metric exemplars to their traces in Tempo
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./confs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../observability/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    ports:
+      # No auth. PROD: firewall it, or bind to 127.0.0.1 ("127.0.0.1:9090:9090")
+      - "9090:9090"
+
+  alertmanager:
+    restart: unless-stopped
+    image: quay.io/prometheus/alertmanager:${ALERTMANAGER_VERSION:-v0.34.1}
+    container_name: tyk-alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./confs/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      # No auth: anyone who can reach it can silence alerts. PROD: firewall it, or bind to 127.0.0.1
+      - "9093:9093"
+
+  tempo:
+    restart: unless-stopped
+    image: grafana/tempo:${TEMPO_VERSION:-3.1.0}
+    container_name: tyk-tempo
+    # Writes into the named volume, which Docker creates root-owned
+    user: "0"
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./confs/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+
+  loki:
+    restart: unless-stopped
+    image: grafana/loki:${LOKI_VERSION:-3.7.8}
+    container_name: tyk-loki
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./confs/loki.yaml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+
+  grafana:
+    restart: unless-stopped
+    image: grafana/grafana:${GRAFANA_VERSION:-13.2.4}
+    container_name: tyk-grafana
+    environment:
+      # Anyone who can reach the port is an Admin, no login. PROD: set GF_AUTH_ANONYMOUS_ENABLED=false
+      # (or GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer), GF_AUTH_DISABLE_LOGIN_FORM=false and GF_SECURITY_ADMIN_PASSWORD
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Opens the API Portfolio instead of the welcome page
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/tyk/tyk-api-portfolio.json
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    volumes:
+      - ./confs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../observability/dashboards:/var/lib/grafana/dashboards/tyk:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+
+volumes:
+  prometheus-data:
+    name: tyk-prometheus-data
+  alertmanager-data:
+    name: tyk-alertmanager-data
+  tempo-data:
+    name: tyk-tempo-data
+  loki-data:
+    name: tyk-loki-data
+  grafana-data:
+    name: tyk-grafana-data

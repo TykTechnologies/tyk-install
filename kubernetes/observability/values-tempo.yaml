@@ -1,0 +1,19 @@
+# Tempo for the Tyk Gateway's traces (grafana-community/tempo chart 3.1.0, Tempo 3.1.0), single binary.
+# Grafana Labs handed its Tempo charts to the community: grafana/tempo is deprecated.
+# Install it in the monitoring namespace as release "tempo": the collector sends to tempo:4317.
+
+tempo:
+  reportingEnabled: false
+  # PROD: longer, e.g. 336h (14 days), with persistence or object storage below
+  retention: 72h
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+# PROD: persistence.enabled=true, or tempo.storage.trace.backend s3 / gcs / azure
+persistence:
+  enabled: false

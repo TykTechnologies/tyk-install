@@ -1,0 +1,30 @@
+# ============================================================================
+# TYK SELF-MANAGED - OPENTELEMETRY OVERLAY (optional)
+# ============================================================================
+# Traces, metrics and logs from every Tyk component, with Grafana dashboards and
+# alert rules. Set up the observability stack and the tyk-otel-* ConfigMaps first
+# (../observability/README.md), then layer this file on top of values.yaml and add
+# the post-renderer:
+#
+#   helm upgrade --install tyk tyk-helm/tyk-stack --version 5.4.0 -n tyk \
+#     -f values.yaml -f values-otel.yaml --post-renderer ../observability/post-render.sh
+#
+# Helm 4: run `helm plugin install ../observability` once, then use --post-renderer tyk-otel.
+#
+# The OpenTelemetry settings come from the tyk-otel-* ConfigMaps through the
+# post-renderer (observability/env), the same files Docker uses. This file only
+# changes what the chart sets itself, which would otherwise win over them.
+#
+# Leave tyk-gateway.gateway.opentelemetry disabled: it sets the resource name to
+# "tyk", and the dashboards and alert rules expect the Gateway's default
+# "tyk-gateway". If you enable it, set its resourceName to tyk-gateway.
+# ============================================================================
+
+tyk-gateway:
+  gateway:
+    log:
+      # JSON lines, so the collector can extract level, API id and trace id
+      format: "json"
+    accessLogs:
+      # One line per request with its trace id. PERFORMANCE: doubles log volume under load
+      enabled: true

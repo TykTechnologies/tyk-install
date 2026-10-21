@@ -1,0 +1,32 @@
+# Any OTLP backend, over OTLP/HTTP, alongside the local stack:
+# Grafana Cloud, New Relic, Honeycomb, Elastic, Dynatrace, SigNoz, Uptrace, ...
+#
+#   OTLP_EXPORT_ENDPOINT  base URL; /v1/traces, /v1/metrics and /v1/logs are appended
+#   OTLP_EXPORT_HEADERS   auth headers as a JSON map, e.g. {"Authorization":"Basic <token>"}; may be left unset
+#
+# Each signal gets a pipeline of its own, so the local pipelines are left untouched.
+
+exporters:
+  otlp_http/export:
+    endpoint: ${env:OTLP_EXPORT_ENDPOINT}
+    headers: ${env:OTLP_EXPORT_HEADERS}
+
+processors:
+  # Dynatrace only accepts delta metrics: add cumulativetodelta to metrics/export below.
+  cumulativetodelta:
+
+service:
+  pipelines:
+    metrics/export:
+      receivers: [otlp, span_metrics]
+      # Dynatrace: [memory_limiter, cumulativetodelta, batch]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/export]
+    traces/export:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/export]
+    logs/export:
+      receivers: [otlp, file_log/tyk]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/export]

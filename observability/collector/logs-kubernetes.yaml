@@ -1,0 +1,74 @@
+# Container logs of the Tyk pods on Kubernetes, read from the node's /var/log/pods.
+# Needs the collector as a DaemonSet with /var/log/pods mounted (the chart's logsCollection
+# preset does this) and running as root (the files are root-owned).
+# Only the Tyk charts' containers are read; their names are fixed by the charts.
+
+receivers:
+  file_log/tyk:
+    include:
+      - /var/log/pods/*/gateway-tyk-gateway/*.log
+      - /var/log/pods/*/dashboard-tyk-dashboard/*.log
+      - /var/log/pods/*/dev-portal-tyk-dev-portal/*.log
+      - /var/log/pods/*/pump-tyk-pump/*.log
+      - /var/log/pods/*/mdcb-tyk-mdcb/*.log
+    include_file_path: true
+    start_at: end
+    operators:
+      # Parses the CRI / Docker log format and adds k8s.namespace.name, k8s.pod.name, k8s.container.name
+      - type: container
+      - type: add
+        field: resource["service.name"]
+        value: tyk-gateway
+        if: 'resource["k8s.container.name"] == "gateway-tyk-gateway"'
+      - type: add
+        field: resource["service.name"]
+        value: tyk-dashboard
+        if: 'resource["k8s.container.name"] == "dashboard-tyk-dashboard"'
+      - type: add
+        field: resource["service.name"]
+        value: tyk-portal
+        if: 'resource["k8s.container.name"] == "dev-portal-tyk-dev-portal"'
+      - type: add
+        field: resource["service.name"]
+        value: tyk-pump
+        if: 'resource["k8s.container.name"] == "pump-tyk-pump"'
+      - type: add
+        field: resource["service.name"]
+        value: tyk-mdcb
+        if: 'resource["k8s.container.name"] == "mdcb-tyk-mdcb"'
+      # Tyk logs JSON lines (TYK_GW_LOGFORMAT=json): fields land under tyk.*, which
+      # Loki exposes as tyk_level, tyk_api_id, tyk_trace_id, ...
+      - type: json_parser
+        parse_from: body
+        parse_to: attributes.tyk
+        if: 'body matches "^\\s*\\{"'
+        on_error: send_quiet
+        timestamp:
+          parse_from: attributes.tyk.time
+          layout_type: gotime
+          layout: '2006-01-02T15:04:05Z07:00'
+        severity:
+          parse_from: attributes.tyk.level
+          mapping:
+            warn: warning
+      # The log message becomes the body.
+      - type: move
+        from: attributes.tyk.message
+        to: body
+        if: 'attributes.tyk != nil and attributes.tyk.message != nil and attributes.tyk.message != ""'
+      # Access logs have an empty message: give them a readable body.
+      - type: add
+        field: body
+        value: EXPR(attributes.tyk.method + " " + attributes.tyk.original_path + " " + string(attributes.tyk.status) + " " + attributes.tyk.api_name)
+        if: 'attributes.tyk != nil and attributes.tyk.prefix == "access-log" and attributes.tyk.method != nil and attributes.tyk.original_path != nil and attributes.tyk.status != nil and attributes.tyk.api_name != nil'
+      - type: remove
+        field: attributes.tyk.message
+        if: 'attributes.tyk != nil and attributes.tyk.message != nil'
+      - type: add
+        field: resource["service.namespace"]
+        value: tyk
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp, file_log/tyk]

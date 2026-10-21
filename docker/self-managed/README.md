@@ -381,6 +381,20 @@ docker run --rm \
 
 ---
 
+## Observability (Optional)
+
+Add OpenTelemetry traces, metrics and logs, with an OpenTelemetry Collector, Prometheus, Alertmanager,
+Tempo, Loki and Grafana dashboards:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d
+```
+
+Grafana is at `http://localhost:3002` (folder **Tyk**). The Dashboard and Developer Portal metrics
+need Dashboard 5.16+ and Portal 1.20+. See [docker/observability](../observability/).
+
+---
+
 ## Production Considerations
 
 - Check the env files under confs and apply the PROD recommendations noted in comments.
