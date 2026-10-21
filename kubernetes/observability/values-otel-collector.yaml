@@ -1,0 +1,103 @@
+# OpenTelemetry Collector for Tyk (open-telemetry/opentelemetry-collector chart 0.175.1).
+# Install it in the Tyk namespace: the Tyk components send OTLP to otel-collector:4317.
+# Its configuration is the shared observability/collector, loaded into ConfigMaps by assets.sh.
+
+# A DaemonSet, so each node's collector also reads the Tyk pods' logs from /var/log/pods.
+# PERFORMANCE: on large clusters, run a Deployment for OTLP and keep the DaemonSet for logs only
+mode: daemonset
+fullnameOverride: otel-collector
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: 0.162.0
+
+command:
+  name: otelcol-contrib
+  extraArgs:
+    - --config=/etc/otelcol-tyk/logs-kubernetes.yaml
+    # Extra backend: exporter-<none|otlp|prometheus-remote-write|datadog|azure-monitor|google-cloud|aws>.yaml
+    # and its variables in extraEnvs below; see observability/collector/exporters
+    - --config=/etc/otelcol-tyk/exporter-none.yaml
+
+# ConfigMap otel-collector, key relay = observability/collector/config.yaml (assets.sh)
+configMap:
+  create: false
+  existingName: otel-collector
+
+extraVolumes:
+  - name: collector-extra
+    configMap:
+      # logs-kubernetes.yaml and exporter-*.yaml (assets.sh)
+      name: otel-collector-extra
+extraVolumeMounts:
+  - name: collector-extra
+    mountPath: /etc/otelcol-tyk
+
+extraEnvs:
+  - name: TEMPO_OTLP_ENDPOINT
+    value: tempo.monitoring.svc.cluster.local:4317
+  - name: LOKI_OTLP_ENDPOINT
+    value: http://loki.monitoring.svc.cluster.local:3100/otlp
+  # Variables for the selected exporter, e.g. from a Secret:
+  # - name: OTLP_EXPORT_HEADERS
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: otel-export
+  #       key: headers
+
+# Mounts /var/log/pods. The pipeline itself comes from logs-kubernetes.yaml.
+presets:
+  logsCollection:
+    enabled: true
+
+# Run on every node, including tainted ones (dedicated gateway pools): the Service only routes to
+# the collector on the caller's own node (internalTrafficPolicy: Local), so a node without one loses
+# its pods' telemetry
+tolerations:
+  - operator: Exists
+
+# Root, to read the node's log files (root-owned). PROD: drop logs collection to run as non-root
+securityContext:
+  runAsUser: 0
+  runAsGroup: 0
+
+# A DaemonSet gets no Service unless asked; the Tyk components need one.
+service:
+  enabled: true
+
+ports:
+  otlp:
+    hostPort: 0
+  otlp-http:
+    hostPort: 0
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+  # The collector's own metrics
+  metrics:
+    enabled: true
+  # Every Tyk component's metrics (prometheus exporter in config.yaml)
+  prom-exporter:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP
+
+# Scraped by kube-prometheus-stack's Prometheus
+podMonitor:
+  enabled: true
+  metricsEndpoints:
+    # honorLabels keeps the components' own job / instance (service.name / service.instance.id)
+    - port: prom-exporter
+      honorLabels: true
+    - port: metrics
+
+# PROD: size to your traffic; GOMEMLIMIT is set to 80% of the limit
+resources:
+  limits:
+    memory: 512Mi

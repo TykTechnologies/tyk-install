@@ -1,0 +1,58 @@
+# Loki for the Tyk components' logs (grafana-community/loki chart 18.13.8, Loki 3.7.8), single binary.
+# The open-source Loki chart moved here in March 2026; grafana/loki is maintenance-only (Enterprise Logs).
+# Install it in the monitoring namespace as release "loki": the collector sends to loki:3100/otlp.
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  # PROD: object storage (s3, gcs, azure) instead of the pod's filesystem
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+  limits_config:
+    # OTLP log attributes (tyk_api_id, tyk_trace_id, ...) are kept as structured metadata
+    allow_structured_metadata: true
+    # Adds detected_level, which the dashboards filter on
+    discover_log_levels: true
+    # PROD: longer, e.g. 336h (14 days)
+    retention_period: 72h
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+  analytics:
+    reporting_enabled: false
+
+singleBinary:
+  replicas: 1
+  # PROD: size the volume to your log volume and retention
+  persistence:
+    size: 10Gi
+
+# Not needed for a single binary
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+gateway:
+  enabled: false
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false

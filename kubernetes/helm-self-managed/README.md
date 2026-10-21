@@ -728,6 +728,25 @@ the operator's ClusterRole cluster-wide.
 
 ---
 
+## Observability (Optional)
+
+OpenTelemetry traces, metrics and logs from every Tyk component, with Prometheus, Alertmanager,
+Grafana, Tempo and Loki. After installing the observability stack, add the overlay and the
+post-renderer to the install:
+
+```bash
+helm upgrade --install tyk tyk-helm/tyk-stack --version 5.4.0 \
+  --namespace tyk \
+  --values values.yaml \
+  --values values-otel.yaml \
+  --post-renderer ../observability/post-render.sh
+```
+
+With Helm 4, run `helm plugin install ../observability` once and use `--post-renderer tyk-otel`.
+See [kubernetes/observability](../observability/) for the full steps.
+
+---
+
 ## Configuration Details
 
 ### Secrets Management

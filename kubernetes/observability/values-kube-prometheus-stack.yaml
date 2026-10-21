@@ -1,0 +1,104 @@
+# Prometheus, Alertmanager and Grafana for Tyk (prometheus-community/kube-prometheus-stack chart 92.0.0).
+# Install it in the monitoring namespace. Tyk's dashboards and alert rules are added by assets.sh.
+#
+# Only what Tyk needs is on. PROD: to also monitor the cluster itself, turn the defaults back on
+# (defaultRules, kubeStateMetrics, nodeExporter, kubelet and the control plane scrapes, defaultDashboardsEnabled).
+
+defaultRules:
+  create: false
+kubeStateMetrics:
+  enabled: false
+nodeExporter:
+  enabled: false
+kubelet:
+  enabled: false
+kubeApiServer:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+coreDns:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    # PROD: 30s-60s, in step with the components' export interval
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    # PROD: size retention to your disk (storageSpec), or remote-write to long-term storage
+    retention: 7d
+    # Links from metric exemplars to their traces in Tempo
+    enableFeatures:
+      - exemplar-storage
+    # Pick up the collector's PodMonitor and the Tyk PrometheusRules from any namespace
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+# Alertmanager with no receiver; alerts still show in Grafana. PROD: set alertmanager.config
+# with your routes and receivers (Slack, PagerDuty, webhook, ...)
+
+grafana:
+  image:
+    tag: 13.2.4
+  # Anyone who can reach Grafana is an Admin, no login. PROD: set auth.anonymous.enabled=false
+  # (or org_role=Viewer), auth.disable_login_form=false, and admin.existingSecret instead of adminPassword
+  adminPassword: admin
+  grafana.ini:
+    auth.anonymous:
+      enabled: true
+      org_role: Admin
+    auth:
+      disable_login_form: true
+    analytics:
+      reporting_enabled: false
+    dashboards:
+      # Opens the API Portfolio instead of the welcome page
+      default_home_dashboard_path: /tmp/dashboards/Tyk/tyk-api-portfolio.json
+  defaultDashboardsEnabled: false
+  sidecar:
+    dashboards:
+      # ConfigMaps labelled grafana_dashboard=1 (assets.sh), in the folder named by grafana_folder
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      # The Tyk dashboards and links expect these UIDs
+      uid: tyk-prometheus
+      exemplarTraceIdDestinations:
+        datasourceUid: tyk-tempo
+        traceIdLabelName: trace_id
+  additionalDataSources:
+    - name: Tempo
+      uid: tyk-tempo
+      type: tempo
+      url: http://tempo:3200
+      jsonData:
+        nodeGraph:
+          enabled: true
+        tracesToLogsV2:
+          datasourceUid: tyk-loki
+          spanStartTimeShift: "-5m"
+          spanEndTimeShift: "5m"
+          customQuery: true
+          query: '{service_name="$${__span.tags["service.name"]}"} | tyk_trace_id="$${__trace.traceId}"'
+        tracesToMetrics:
+          datasourceUid: tyk-prometheus
+        lokiSearch:
+          datasourceUid: tyk-loki
+    - name: Loki
+      uid: tyk-loki
+      type: loki
+      url: http://loki:3100
+      jsonData:
+        derivedFields:
+          - name: TraceID
+            matcherType: label
+            matcherRegex: tyk_trace_id
+            datasourceUid: tyk-tempo
+            url: "$${__value.raw}"
