@@ -50,6 +50,18 @@ Or choose a deployment:
 Self-Managed and Hybrid both run on Red Hat OpenShift from tyk-charts 5.4.0 by layering their
 `values-openshift.yaml` overlay. See each guide's "Deploying on Red Hat OpenShift" section.
 
+### Observability (Optional)
+
+OpenTelemetry traces, metrics and logs for Self-Managed and Hybrid, with an OpenTelemetry Collector,
+Prometheus, Alertmanager, Tempo, Loki and Grafana. Ten Grafana dashboards and 47 alert rules cover the
+Gateway, Dashboard, MDCB and Developer Portal, and the collector can also send to another backend.
+
+| Platform   | Description                                                                 | Guide                                     |
+| ---------- | --------------------------------------------------------------------------- | ----------------------------------------- |
+| **Docker** | `docker-compose.otel.yml` overlay for Self-Managed and Hybrid               | [README](./docker/observability/)         |
+| **Kubernetes** | Helm values, `values-otel.yaml` overlays and a post-renderer            | [README](./kubernetes/observability/)     |
+| **Shared** | Dashboards, alert rules, collector config and component settings            | [README](./observability/)                |
+
 ## Utilities
 
 ### Bootstrap Utility
@@ -79,12 +91,15 @@ tyk-install/
 │   ├── getting-started/   # Self-Managed plus sample APIs and Portal content (start.sh)
 │   ├── hybrid/            # Hybrid data plane Docker deployment
 │   ├── ai-studio/         # AI Studio Docker deployment
+│   ├── observability/     # Optional observability stack (docker-compose.otel.yml overlays)
 │   └── utils/             # Shared Docker utilities
 ├── kubernetes/
 │   ├── helm-self-managed/ # Full stack Helm deployment
 │   ├── helm-hybrid/       # Hybrid data plane Helm deployment
 │   ├── helm-ai-studio/    # AI Studio Helm deployment
+│   ├── observability/     # Optional observability stack (Helm values, post-renderer)
 │   └── standalone-operator/ # Tyk Operator deployment
+├── observability/         # Dashboards, alert rules and collector config for both platforms
 └── utils/
     └── bootstrap/         # Bootstrap automation utility
 ```

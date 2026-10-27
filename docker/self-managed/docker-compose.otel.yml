@@ -1,0 +1,41 @@
+# Optional: OpenTelemetry traces, metrics and logs for every Tyk component, with Grafana
+# dashboards and alert rules. Layer it on the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d
+# Grafana: http://localhost:3002 (folder "Tyk"). See ../../observability/README.md.
+
+include:
+  - path: ../observability/docker-compose.yml
+
+services:
+  tyk-gateway:
+    # Also on the observability network, to reach otel-collector:4317
+    networks:
+      - default
+    env_file:
+      - ../../observability/env/gateway.env
+    logging: &tyk-logging
+      driver: json-file
+      options:
+        # Lets the collector pick the Tyk services' logs out of Docker's log files
+        labels: com.docker.compose.service
+        max-size: 10m
+        max-file: "3"
+
+  # Control plane metrics need Tyk Dashboard 5.16+ and Developer Portal 1.20+; older versions ignore the settings
+  tyk-dashboard:
+    networks:
+      - default
+    env_file:
+      - ../../observability/env/dashboard.env
+    logging: *tyk-logging
+
+  tyk-portal:
+    networks:
+      - default
+    env_file:
+      - ../../observability/env/portal.env
+    logging: *tyk-logging
+
+  # Tyk Pump exports no OpenTelemetry metrics; only its logs are collected
+  tyk-pump:
+    logging: *tyk-logging

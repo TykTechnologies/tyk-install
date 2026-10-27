@@ -592,6 +592,25 @@ oc get pods -n tyk-dp -o custom-columns='NAME:.metadata.name,SCC:.metadata.annot
 
 ---
 
+## Observability (Optional)
+
+OpenTelemetry traces, metrics and logs from the Gateway, with Prometheus, Alertmanager, Grafana,
+Tempo and Loki. After installing the observability stack (with `TYK_NAMESPACE=tyk-dp`), add the
+overlay and the post-renderer to the install:
+
+```bash
+helm upgrade --install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+  --namespace tyk-dp \
+  --values values.yaml \
+  --values values-otel.yaml \
+  --post-renderer ../observability/post-render.sh
+```
+
+With Helm 4, run `helm plugin install ../observability` once and use `--post-renderer tyk-otel`.
+See [kubernetes/observability](../observability/) for the full steps.
+
+---
+
 ## Configuration Details
 
 ### Secrets Management

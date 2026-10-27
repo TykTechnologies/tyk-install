@@ -1,0 +1,57 @@
+# The Tyk dashboards pick their datasources from variables, defaulting to these.
+# The UIDs are fixed so links between traces, logs and metrics resolve.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: tyk-prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      # The scrape interval, so $__rate_interval always spans enough samples
+      timeInterval: 15s
+      exemplarTraceIdDestinations:
+        - datasourceUid: tyk-tempo
+          name: trace_id
+
+  - name: Tempo
+    uid: tyk-tempo
+    type: tempo
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      nodeGraph:
+        enabled: true
+      tracesToLogsV2:
+        datasourceUid: tyk-loki
+        spanStartTimeShift: "-5m"
+        spanEndTimeShift: "5m"
+        customQuery: true
+        query: '{service_name="$${__span.tags["service.name"]}"} | tyk_trace_id="$${__trace.traceId}"'
+      tracesToMetrics:
+        datasourceUid: tyk-prometheus
+      lokiSearch:
+        datasourceUid: tyk-loki
+
+  - name: Loki
+    uid: tyk-loki
+    type: loki
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherType: label
+          matcherRegex: tyk_trace_id
+          datasourceUid: tyk-tempo
+          url: "$${__value.raw}"
+
+  - name: Alertmanager
+    uid: tyk-alertmanager
+    type: alertmanager
+    url: http://alertmanager:9093
+    editable: false
+    jsonData:
+      implementation: prometheus

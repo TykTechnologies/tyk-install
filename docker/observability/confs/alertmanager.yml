@@ -1,0 +1,27 @@
+# Alertmanager for the Tyk alert rules. Alerts show in Grafana (Alerting > Alert rules)
+# whatever the receiver. PROD: route them to your on-call tool, for example:
+#
+# route:
+#   receiver: slack
+#   group_by: [alertname, tyk_component, control_plane_id]
+#   routes:
+#     - matchers: [severity="critical"]
+#       receiver: pagerduty
+# receivers:
+#   - name: slack
+#     slack_configs:
+#       - api_url: https://hooks.slack.com/services/...
+#         channel: "#tyk-alerts"
+#   - name: pagerduty
+#     pagerduty_configs:
+#       - routing_key: <key>
+#   - name: webhook
+#     webhook_configs:
+#       - url: https://example.com/alerts
+
+route:
+  receiver: "null"
+  group_by: [alertname, tyk_component]
+
+receivers:
+  - name: "null"

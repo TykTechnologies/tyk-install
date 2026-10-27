@@ -1,0 +1,3 @@
+# Default: no extra backend. The local Prometheus, Tempo and Loki still receive everything.
+# To also send to another backend, select one of the files next to this one
+# (OTEL_COLLECTOR_EXPORTER on Docker, collector extraArgs on Kubernetes).

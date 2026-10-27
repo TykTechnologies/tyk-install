@@ -1,0 +1,45 @@
+# AWS, alongside the local stack: Amazon Managed Service for Prometheus (PromQL, so
+# the Tyk dashboards work in Amazon Managed Grafana), X-Ray and CloudWatch Logs.
+# Credentials come from the AWS SDK chain (IRSA / Pod Identity on EKS, task role on
+# ECS, or AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY).
+#
+#   AWS_REGION              e.g. eu-west-1
+#   AMP_REMOTE_WRITE_URL    https://aps-workspaces.<region>.amazonaws.com/workspaces/<id>/api/v1/remote_write
+#   CLOUDWATCH_LOG_GROUP    e.g. /tyk/gateway
+
+extensions:
+  sigv4auth/export:
+    region: ${env:AWS_REGION}
+    service: aps
+
+exporters:
+  prometheus_remote_write/export:
+    endpoint: ${env:AMP_REMOTE_WRITE_URL}
+    auth:
+      authenticator: sigv4auth/export
+    # Every resource attribute becomes a label, as in the local Prometheus
+    resource_constant_labels:
+      included: ["*"]
+  awsxray/export:
+    region: ${env:AWS_REGION}
+  awscloudwatchlogs/export:
+    region: ${env:AWS_REGION}
+    log_group_name: ${env:CLOUDWATCH_LOG_GROUP:-/tyk}
+    log_stream_name: tyk
+
+service:
+  # A list replaces the base one, so health_check is repeated here.
+  extensions: [health_check, sigv4auth/export]
+  pipelines:
+    metrics/export:
+      receivers: [otlp, span_metrics]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus_remote_write/export]
+    traces/export:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [awsxray/export]
+    logs/export:
+      receivers: [otlp, file_log/tyk]
+      processors: [memory_limiter, batch]
+      exporters: [awscloudwatchlogs/export]

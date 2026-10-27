@@ -1,0 +1,27 @@
+# Google Cloud, alongside the local stack: Managed Service for Prometheus (PromQL,
+# so the Tyk dashboards work against it), Cloud Trace and Cloud Logging.
+# Credentials come from Application Default Credentials (Workload Identity on GKE,
+# or GOOGLE_APPLICATION_CREDENTIALS pointing at a mounted key file).
+#
+#   GOOGLE_CLOUD_PROJECT  project id
+
+exporters:
+  googlemanagedprometheus/export:
+    project: ${env:GOOGLE_CLOUD_PROJECT}
+  googlecloud/export:
+    project: ${env:GOOGLE_CLOUD_PROJECT}
+
+service:
+  pipelines:
+    metrics/export:
+      receivers: [otlp, span_metrics]
+      processors: [memory_limiter, batch]
+      exporters: [googlemanagedprometheus/export]
+    traces/export:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [googlecloud/export]
+    logs/export:
+      receivers: [otlp, file_log/tyk]
+      processors: [memory_limiter, batch]
+      exporters: [googlecloud/export]

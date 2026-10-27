@@ -1,0 +1,174 @@
+name: Test Observability
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'observability/**'
+      - 'docker/observability/**'
+      - 'docker/self-managed/**'
+      - 'docker/hybrid/**'
+      - 'docker/getting-started/**'
+      - 'kubernetes/observability/**'
+      - 'kubernetes/helm-*/values-otel.yaml'
+      - '.github/workflows/test-observability.yml'
+  workflow_dispatch:
+
+env:
+  PROMETHEUS_IMAGE: quay.io/prometheus/prometheus:v3.15.0
+  COLLECTOR_IMAGE: otel/opentelemetry-collector-contrib:0.162.0
+
+jobs:
+  static:
+    name: Rules, collector config, dashboards and manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Alert rules
+        run: |
+          docker run --rm -v "$PWD/observability/rules:/rules" -w /rules --entrypoint promtool \
+            "$PROMETHEUS_IMAGE" check rules tyk-control-plane.rules.yml tyk-gateway.rules.yml
+          docker run --rm -v "$PWD/observability/rules:/rules" -w /rules/tests --entrypoint promtool \
+            "$PROMETHEUS_IMAGE" test rules tyk-control-plane.rules.test.yml tyk-gateway.rules.test.yml
+
+      - name: Collector config, every platform and exporter
+        run: |
+          for platform in docker kubernetes; do
+            for exporter in observability/collector/exporters/*.yaml; do
+              echo "logs-$platform.yaml + $(basename "$exporter")"
+              docker run --rm -v "$PWD/observability/collector:/c:ro" \
+                -e OTLP_EXPORT_ENDPOINT=https://otlp.example.com \
+                -e PROMETHEUS_REMOTE_WRITE_ENDPOINT=https://prometheus.example.com/api/v1/push \
+                -e DD_API_KEY=dummy -e GOOGLE_CLOUD_PROJECT=dummy \
+                -e APPLICATIONINSIGHTS_CONNECTION_STRING=InstrumentationKey=00000000-0000-0000-0000-000000000000 \
+                -e AWS_REGION=eu-west-1 -e AMP_REMOTE_WRITE_URL=https://aps.example.com/api/v1/remote_write \
+                -e AWS_ACCESS_KEY_ID=dummy -e AWS_SECRET_ACCESS_KEY=dummy \
+                "$COLLECTOR_IMAGE" validate --config=/c/config.yaml --config="/c/logs-$platform.yaml" \
+                --config="/c/exporters/$(basename "$exporter")"
+            done
+          done
+
+      - name: Dashboards
+        run: observability/scripts/check-dashboards.sh
+
+      - name: Docker Compose overlays
+        run: |
+          for d in self-managed hybrid; do
+            (cd "docker/$d" && cp .env.example .env && \
+              docker compose -f docker-compose.yml -f docker-compose.otel.yml config --quiet && echo "$d OK")
+          done
+
+      # Helm 3: the post-renderer is a script path
+      - uses: azure/setup-helm@v5
+        with:
+          version: v3.22.0
+
+      - name: Kubernetes manifests (Helm 3)
+        run: |
+          kubernetes/observability/assets.sh > /tmp/assets.yaml
+          helm repo add tyk-helm https://helm.tyk.io/public/helm/charts/
+          helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add grafana-community https://grafana-community.github.io/helm-charts
+          helm template tyk tyk-helm/tyk-stack --version 5.4.0 -n tyk \
+            -f kubernetes/helm-self-managed/values.yaml -f kubernetes/helm-self-managed/values-otel.yaml \
+            --post-renderer kubernetes/observability/post-render.sh > /tmp/tyk-stack.yaml
+          helm template tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 -n tyk-dp \
+            -f kubernetes/helm-hybrid/values.yaml -f kubernetes/helm-hybrid/values-otel.yaml \
+            --post-renderer kubernetes/observability/post-render.sh > /tmp/tyk-data-plane.yaml
+          grep -q 'name: tyk-otel-gateway' /tmp/tyk-stack.yaml
+          grep -q 'name: tyk-otel-dashboard' /tmp/tyk-stack.yaml
+          grep -q 'name: tyk-otel-gateway' /tmp/tyk-data-plane.yaml
+          helm template otel-collector open-telemetry/opentelemetry-collector --version 0.175.1 -n tyk \
+            -f kubernetes/observability/values-otel-collector.yaml > /dev/null
+          helm template kps prometheus-community/kube-prometheus-stack --version 92.0.0 -n monitoring \
+            -f kubernetes/observability/values-kube-prometheus-stack.yaml > /dev/null
+          helm template tempo grafana-community/tempo --version 3.1.0 -n monitoring \
+            -f kubernetes/observability/values-tempo.yaml > /dev/null
+          helm template loki grafana-community/loki --version 18.13.8 -n monitoring \
+            -f kubernetes/observability/values-loki.yaml > /dev/null
+
+      # Helm 4: the post-renderer is the tyk-otel plugin (kubernetes/observability/plugin.yaml)
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.0
+
+      - name: Kubernetes manifests (Helm 4)
+        run: |
+          helm version --short | grep -q '^v4' || { echo "expected Helm 4"; exit 1; }
+          helm plugin install kubernetes/observability
+          helm repo add tyk-helm https://helm.tyk.io/public/helm/charts/
+          helm template tyk tyk-helm/tyk-stack --version 5.4.0 -n tyk \
+            -f kubernetes/helm-self-managed/values.yaml -f kubernetes/helm-self-managed/values-otel.yaml \
+            --post-renderer tyk-otel > /tmp/tyk-stack-helm4.yaml
+          helm template tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 -n tyk-dp \
+            -f kubernetes/helm-hybrid/values.yaml -f kubernetes/helm-hybrid/values-otel.yaml \
+            --post-renderer tyk-otel > /tmp/tyk-data-plane-helm4.yaml
+          grep -q 'name: tyk-otel-gateway' /tmp/tyk-stack-helm4.yaml
+          grep -q 'name: tyk-otel-dashboard' /tmp/tyk-stack-helm4.yaml
+          grep -q 'name: tyk-otel-gateway' /tmp/tyk-data-plane-helm4.yaml
+
+  smoke:
+    name: Docker stack smoke test
+    needs: static
+    # Needs the DASH_LICENSE secret, which pull requests from forks do not get
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Validate license secret
+        run: |
+          if [ -z "${{ secrets.DASH_LICENSE }}" ]; then
+            echo "Error: DASH_LICENSE secret is not set"
+            exit 1
+          fi
+
+      - name: Start self-managed with the OpenTelemetry overlay
+        env:
+          DASH_LICENSE: ${{ secrets.DASH_LICENSE }}
+        run: |
+          cd docker/self-managed
+          cp .env.example .env
+          sed -i "s|TYK_LICENSE_KEY=|TYK_LICENSE_KEY=${DASH_LICENSE}|" .env
+          sed -i "s|TYK_PORTAL_LICENSE=|TYK_PORTAL_LICENSE=${DASH_LICENSE}|" .env
+          docker compose -p tyk-otel -f docker-compose.yml -f docker-compose.otel.yml \
+            -f ../getting-started/docker-compose.yml up -d
+
+      - name: Bootstrap the Dashboard
+        run: |
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/hello > /dev/null && break; sleep 5; done
+          cd docker/getting-started
+          docker run --rm --network tyk -v "$(pwd)/bootstrap:/bootstrap" -w /bootstrap \
+            ghcr.io/orange-opensource/hurl:latest --http1.1 --test --variables-file variables.env bootstrap.hurl
+
+      - name: Send traffic through the Gateway
+        run: |
+          for i in $(seq 1 100); do
+            curl -s -o /dev/null http://localhost:8080/httpbingo/get
+            curl -s -o /dev/null -H "Authorization: invalid" http://localhost:8080/httpbingo/get
+          done
+
+      - name: Smoke test
+        run: observability/scripts/smoke-test.sh
+
+      - name: Every dashboard query runs
+        run: observability/scripts/check-panels.py --show-empty
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          cd docker/self-managed
+          docker compose -p tyk-otel -f docker-compose.yml -f docker-compose.otel.yml \
+            -f ../getting-started/docker-compose.yml logs --tail 50 otel-collector prometheus grafana tyk-gateway
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd docker/self-managed
+          docker compose -p tyk-otel -f docker-compose.yml -f docker-compose.otel.yml \
+            -f ../getting-started/docker-compose.yml down -v --remove-orphans || true

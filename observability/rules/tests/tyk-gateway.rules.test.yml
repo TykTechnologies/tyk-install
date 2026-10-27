@@ -1,0 +1,236 @@
+---
+# Unit tests for tyk-gateway.rules.yml. Run from the repository root:
+#
+#   docker run --rm -v "$PWD/observability/rules:/rules" -w /rules/tests \
+#     --entrypoint promtool quay.io/prometheus/prometheus:v3.5.0 test rules tyk-gateway.rules.test.yml
+
+rule_files:
+  - ../tyk-gateway.rules.yml
+
+evaluation_interval: 1m
+
+tests:
+
+  # API a1 returns 5xx on a third of its traffic; a2 is healthy and must not fire.
+  # The Dashboard exports a metric of the same name and must be ignored.
+  - interval: 1m
+    input_series:
+      - series: 'tyk_api_requests_total{service_name="tyk-gateway", tyk_api_id="a1", http_response_status_code="200"}'
+        values: '0+60x20'
+      - series: 'tyk_api_requests_total{service_name="tyk-gateway", tyk_api_id="a1", http_response_status_code="500"}'
+        values: '0+30x20'
+      - series: 'tyk_api_requests_total{service_name="tyk-gateway", tyk_api_id="a2", http_response_status_code="200"}'
+        values: '0+60x20'
+      - series: 'tyk_api_requests_total{service_name="tyk-gateway", tyk_api_id="a2", http_response_status_code="404"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: TykGatewayHighErrorRate
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: TykGatewayHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_api_id: a1
+            exp_annotations:
+              summary: "5xx error rate above 10% for API a1"
+              description: "33.33% of requests to API a1 returned 5xx over the last 5 minutes. The response flag breakdown on the API Troubleshooting dashboard shows whether the Gateway or the upstream produced them."
+              dashboard: /d/tyk-api-troubleshooting
+
+  # A trickle of failures on a near-idle API does not page.
+  - interval: 1m
+    input_series:
+      - series: 'tyk_api_requests_total{service_name="tyk-gateway", tyk_api_id="idle", http_response_status_code="500"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: TykGatewayHighErrorRate
+        exp_alerts: []
+
+  # Every request of a1 lands in the 1s-2.5s bucket; the Dashboard's own
+  # http_server_request_duration_seconds (same name) is fast and ignored.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-gateway", tyk_api_id="a1", le="0.5"}'
+        values: '0x20'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-gateway", tyk_api_id="a1", le="1"}'
+        values: '0x20'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-gateway", tyk_api_id="a1", le="2.5"}'
+        values: '0+60x20'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-gateway", tyk_api_id="a1", le="+Inf"}'
+        values: '0+60x20'
+      # Slow (p95 ~4.8s) but near idle (1 request every 2 minutes): below the traffic floor.
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-gateway", tyk_api_id="idle", le="1"}'
+        values: '0x20'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-gateway", tyk_api_id="idle", le="5"}'
+        values: '0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-gateway", tyk_api_id="idle", le="+Inf"}'
+        values: '0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10'
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="idle"}'
+        values: '0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10'
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="a1"}'
+        values: '0+60x20'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-dashboard", http_route="/api/apis", le="5"}'
+        values: '0+60x20'
+      - series: 'http_server_request_duration_seconds_bucket{service_name="tyk-dashboard", http_route="/api/apis", le="+Inf"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: TykGatewayHighLatency
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_api_id: a1
+            exp_annotations:
+              summary: "p95 latency above 1s for API a1"
+              description: "p95 end-to-end latency of API a1 is 2.425s. If tyk_gateway_request_duration_seconds stays low, the time is spent in the upstream."
+              dashboard: /d/tyk-api-troubleshooting
+
+  # Response flags: auth failures, quota, rate limit and upstream errors.
+  - interval: 1m
+    input_series:
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="a1", tyk_response_flag="AKI"}'
+        values: '0+12x20'
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="a1", tyk_response_flag="QEX"}'
+        values: '0+1x20'
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="a1", tyk_response_flag="RLT"}'
+        values: '0+1x20'
+      # a1: a quarter of its traffic gets URS (1 of 4 req/s)
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="a1", tyk_response_flag="URS"}'
+        values: '0+60x20'
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="a1", tyk_response_flag="200"}'
+        values: '0+180x20'
+      # busy: a single upstream error among 5 req/s must not page
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="busy", tyk_response_flag="URS"}'
+        values: '0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="busy", tyk_response_flag="200"}'
+        values: '0+300x20'
+      # Below the auth threshold (0.05 req/s).
+      - series: 'http_server_request_duration_seconds_count{service_name="tyk-gateway", tyk_api_id="a2", tyk_response_flag="AMF"}'
+        values: '0+3x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: TykGatewayAuthFailureSurge
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_api_id: a1
+            exp_annotations:
+              summary: "Authentication failures above 6/min for API a1"
+              description: "Missing (AMF) or invalid (AKI) credentials at 0.20 req/s. One client IP usually means a misconfigured client; many IPs suggest credential stuffing."
+              dashboard: /d/tyk-api-troubleshooting
+      - eval_time: 10m
+        alertname: TykGatewayQuotaExhausted
+        exp_alerts:
+          - exp_labels:
+              severity: info
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_api_id: a1
+            exp_annotations:
+              summary: "Consumers hitting their quota on API a1"
+              description: "Requests are rejected because a key's quota is used up. The API Portfolio dashboard shows which keys; raise their quota or move them to another policy."
+              dashboard: /d/tyk-api-portfolio
+      - eval_time: 10m
+        alertname: TykGatewayRateLimited
+        exp_alerts:
+          - exp_labels:
+              severity: info
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_api_id: a1
+            exp_annotations:
+              summary: "Rate limit rejections on API a1"
+              description: "Requests are rejected by the rate limiter. If the rejections grow with the request rate, clients may be retrying 429s without backoff."
+              dashboard: /d/tyk-api-portfolio
+      - eval_time: 2m
+        alertname: TykGatewayUpstreamErrors
+        exp_alerts: []
+      # busy's single error (minute 3) is still in the 5m window: only a1 fires.
+      - eval_time: 7m
+        alertname: TykGatewayUpstreamErrors
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_api_id: a1
+            exp_annotations:
+              summary: "Upstream returning 5xx for API a1"
+              description: "23.62% of requests to API a1 got a 5xx from the upstream (URS) for 3 minutes. The Gateway's access logs carry the upstream address."
+              dashboard: /d/tyk-api-troubleshooting
+      - eval_time: 10m
+        alertname: TykGatewayUpstreamErrors
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_api_id: a1
+            exp_annotations:
+              summary: "Upstream returning 5xx for API a1"
+              description: "23.62% of requests to API a1 got a 5xx from the upstream (URS) for 3 minutes. The Gateway's access logs carry the upstream address."
+              dashboard: /d/tyk-api-troubleshooting
+
+  - interval: 1m
+    input_series:
+      - series: 'go_goroutine_count{service_name="tyk-gateway", tyk_gw_id="gw1"}'
+        values: '6000x20'
+      - series: 'go_goroutine_count{service_name="tyk-gateway", tyk_gw_id="gw2"}'
+        values: '800x20'
+      - series: 'go_goroutine_count{service_name="tyk-dashboard"}'
+        values: '9000x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: TykGatewayGoroutineGrowth
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: TykGatewayGoroutineGrowth
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_gw_id: gw1
+            exp_annotations:
+              summary: "Goroutine count above 5000 on gateway gw1"
+              description: "6000 goroutines for 10 minutes. A healthy Gateway under moderate load runs 500-2000; a steady climb points to a leak. Capture a goroutine profile with the http_profiler."
+              dashboard: /d/tyk-gateway-fleet-health
+
+  # gw1 drops from 10 to 5 APIs and stays there; gw2 goes from 0 to 3 (no division by zero).
+  - interval: 1m
+    input_series:
+      - series: 'tyk_gateway_apis_loaded{service_name="tyk-gateway", tyk_gw_id="gw1"}'
+        values: '10x5 5x25'
+      - series: 'tyk_gateway_apis_loaded{service_name="tyk-gateway", tyk_gw_id="gw2"}'
+        values: '0x5 3x25'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: TykGatewayApisLoadedDrop
+        exp_alerts: []
+      - eval_time: 7m
+        alertname: TykGatewayApisLoadedDrop
+        exp_alerts: &gw1_drop
+          - exp_labels:
+              severity: critical
+              tyk_component: gateway
+              service_name: tyk-gateway
+              tyk_gw_id: gw1
+            exp_annotations:
+              summary: "Gateway gw1 lost more than 10% of its APIs"
+              description: "Its loaded API definitions changed by -50% against its peak in the last 15 minutes. Check the Gateway's logs for config sync errors."
+              dashboard: /d/tyk-gateway-fleet-health
+      # Still missing 10 minutes later: still firing.
+      - eval_time: 15m
+        alertname: TykGatewayApisLoadedDrop
+        exp_alerts: *gw1_drop
+      - eval_time: 22m
+        alertname: TykGatewayApisLoadedDrop
+        exp_alerts: []

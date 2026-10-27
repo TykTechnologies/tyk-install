@@ -1,0 +1,12 @@
+# Helm 4 post-renderer plugin running post-render.sh. Helm 4 takes a plugin name for
+# --post-renderer, Helm 3 a script path; see README.md.
+#   helm plugin install ./kubernetes/observability
+#   helm upgrade --install ... --post-renderer tyk-otel
+apiVersion: v1
+type: postrenderer/v1
+name: tyk-otel
+version: 1.0.0
+runtime: subprocess
+runtimeConfig:
+  platformCommand:
+    - command: ${HELM_PLUGIN_DIR}/post-render.sh
