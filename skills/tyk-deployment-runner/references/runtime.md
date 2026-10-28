@@ -82,20 +82,43 @@ Charts by edition: `tyk-oss`, `tyk-stack`, `tyk-data-plane`, `tyk-control-plane`
 
 ## OpenShift
 
-As Helm, plus the SCC overlay and Routes instead of Ingress:
+As Helm, plus the SCC overlay and Routes instead of Ingress. Self-Managed and hybrid ship the
+overlay; pass it on the install and on every later upgrade:
 
 ```bash
-python3 skills/tyk-production-readiness/scripts/profiles.py \
-  apply kubernetes/helm-self-managed/values.yaml --profile openshift -o openshift-values.yaml
-
-helm upgrade --install tyk tyk-helm/tyk-stack -n tyk \
-  -f kubernetes/helm-self-managed/values.yaml -f openshift-values.yaml
+helm upgrade --install tyk tyk-helm/tyk-stack -n tyk --version 5.4.0 \
+  -f kubernetes/helm-self-managed/values.yaml \
+  -f kubernetes/helm-self-managed/values-openshift.yaml
 
 oc expose svc gateway-svc-tyk-tyk-gateway -n tyk --port=8080
 oc get routes -n tyk
 ```
 
+For `helm-oss` and `helm-mdcb`, generate the overlay first:
+
+```bash
+python3 skills/tyk-production-readiness/scripts/profiles.py \
+  apply kubernetes/helm-oss/values.yaml --profile openshift -o openshift-values.yaml
+```
+
 On OpenShift Local (CRC), prefer `kubectl port-forward` over Routes to avoid DNS setup.
+
+## Observability add-on
+
+Self-Managed and hybrid can export traces, metrics and logs over OpenTelemetry to a bundled
+collector, Prometheus, Tempo, Loki and Grafana. It is an overlay, so the base stack is unchanged:
+
+```bash
+# Docker: from docker/self-managed or docker/hybrid
+docker compose -f docker-compose.yml -f ../observability/docker-compose.otel.yml up -d
+
+# Helm: add the values-otel.yaml overlay to the install command
+helm upgrade --install tyk tyk-helm/tyk-stack -n tyk --version 5.4.0 \
+  -f kubernetes/helm-self-managed/values.yaml -f kubernetes/helm-self-managed/values-otel.yaml
+```
+
+Read `docker/observability/README.md` or `kubernetes/observability/README.md` first; the
+Kubernetes path installs the backends with its own charts and a post-renderer.
 
 ## MDCB ordering
 

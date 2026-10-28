@@ -41,7 +41,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n tyk --
 Then the Gateway:
 
 ```bash
-helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.3.0 -f values.yaml
+helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.4.0 -f values.yaml
 ```
 
 Pin `--version`. Without it `helm repo update` can move the chart under you, and the chart
@@ -162,6 +162,6 @@ kubectl delete namespace tyk     # destroys PVCs
 
 ## Reference
 
-- https://tyk.io/docs/tyk-oss-gateway
-- https://github.com/TykTechnologies/tyk-charts
-- https://tyk.io/docs/planning-for-production
+- <https://tyk.io/docs/tyk-oss-gateway>
+- <https://github.com/TykTechnologies/tyk-charts>
+- <https://tyk.io/docs/planning-for-production>

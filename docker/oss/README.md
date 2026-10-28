@@ -136,7 +136,7 @@ docker compose down -v    # stop and destroy volumes
 
 ## Reference
 
-- https://tyk.io/docs/tyk-oss-gateway
-- https://tyk.io/docs/tyk-open-source.mdx
-- https://tyk.io/docs/planning-for-production
+- <https://tyk.io/docs/tyk-oss-gateway>
+- <https://tyk.io/docs/tyk-open-source.mdx>
+- <https://tyk.io/docs/planning-for-production>
 - Kubernetes equivalent: [`../../kubernetes/helm-oss/`](../../kubernetes/helm-oss/)

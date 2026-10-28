@@ -86,6 +86,6 @@ baseline just makes the behaviour harder to reason about.
 
 ## Reference
 
-- https://tyk.io/docs/planning-for-production
-- https://tyk.io/docs/api-management/rate-limit
-- https://tyk.io/docs/tyk-pump
+- <https://tyk.io/docs/planning-for-production>
+- <https://tyk.io/docs/api-management/rate-limit>
+- <https://tyk.io/docs/tyk-pump>

@@ -26,7 +26,7 @@ so identify which one you have before editing anything.
 
 | Log signal | Cause | Fix |
 | --- | --- | --- |
-| `license is invalid` / `expired` | wrong or stale licence | Check `TYK_LICENSE_KEY` in `.env`. Trials expire — re-issue at https://tyk.io/sign-up/. Never print the value while checking it. |
+| `license is invalid` / `expired` | wrong or stale licence | Check `TYK_LICENSE_KEY` in `.env`. Trials expire — re-issue at <https://tyk.io/self-managed-trial/>. Never print the value while checking it. |
 | `pq: database "tyk_analytics" does not exist` | Postgres init script did not run | The init SQL runs only on an empty volume. `docker compose down -v` and up again, which destroys data — confirm first. |
 | `connection refused` to Postgres | Postgres not ready | The Compose healthcheck should prevent this; if it recurs, Postgres is crash-looping — read its own logs. |
 
@@ -65,7 +65,7 @@ kubectl describe pod -n tyk <pod>
 | `CreateContainerConfigError` | a referenced Secret or key is missing. `kubectl describe` names it. |
 | `Pending` forever | no schedulable node, or no default StorageClass for the PVC. |
 | `CrashLoopBackOff` | read the previous container's logs: `kubectl logs <pod> --previous`. |
-| OpenShift: permission denied on start | SCC. Apply the `openshift` profile overlay — see `runtime.md`. |
+| OpenShift: permission denied on start | SCC. Layer `values-openshift.yaml` (Self-Managed, hybrid) or the generated `openshift` overlay — see `runtime.md`. |
 
 ## Recovering credentials
 
@@ -83,6 +83,6 @@ returned. `verify_deployment.sh` exits non-zero precisely so this is not glossed
 
 ## Reference
 
-- https://tyk.io/docs/troubleshooting
-- https://tyk.io/docs/api-management/gateway-config-tyk-oas
-- https://support.tyk.io/hc/en-gb
+- <https://tyk.io/docs/troubleshooting>
+- <https://tyk.io/docs/api-management/gateway-config-tyk-oas>
+- <https://support.tyk.io/hc/en-gb>

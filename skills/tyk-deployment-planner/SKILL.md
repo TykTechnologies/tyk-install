@@ -21,12 +21,13 @@ is `tyk-deployment-runner`'s job — this skill creates nothing and starts nothi
    does not deploy is not a blocker. If preflight flags one, re-run with `--target` before telling
    the user anything is wrong.
 4. Read `references/editions.md` when the edition itself is in question, and
-   `references/versions.md` for the pinned component set.
+   `references/versions.md` for where the pins live and the compatibility rules.
 5. Decide which profiles apply: `prod` and `performance` for anything not a laptop trial,
    `security` whenever the deployment outlives the session, `openshift` on OpenShift.
-6. Run `profiles.py audit` for those profiles and record the findings in the plan. Generate an
-   overlay only for `openshift` (see `## Configuration Overlays`). Never edit a tracked
-   config file.
+6. Run `profiles.py audit` for those profiles and record the findings in the plan. On OpenShift,
+   use the committed `values-openshift.yaml` where the target directory ships one, and generate an
+   overlay only where it does not (see `## Configuration Overlays`). Never edit a tracked config
+   file.
 7. Write `deployment-plan.md` somewhere the user will keep it — see `## Where To Put The Plan`.
 
 ## Deployment Plan
@@ -59,10 +60,15 @@ Whatever you choose, say where you put it, and never write into a path git track
 
 ## Configuration Overlays
 
+`kubernetes/helm-self-managed/` and `kubernetes/helm-hybrid/` ship a committed
+`values-openshift.yaml` (tyk-charts 5.4.0 or later). Prefer it: it is tested, and every later
+`helm upgrade` must pass it again. For the Helm paths without one (`helm-oss`, `helm-mdcb`),
+generate the overlay from the marker blocks:
+
 ```bash
 # The OpenShift overlay is the one case that is safe to generate.
 python3 ../tyk-production-readiness/scripts/profiles.py \
-  apply kubernetes/helm-self-managed/values.yaml --profile openshift -o openshift-values.yaml
+  apply kubernetes/helm-oss/values.yaml --profile openshift -o openshift-values.yaml
 ```
 
 For production and performance, run `audit` instead and record the changes in the plan for a human

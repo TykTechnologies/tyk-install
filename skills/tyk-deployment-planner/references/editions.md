@@ -77,8 +77,8 @@ AI Studio, Microgateway, and analytics pulse, for governing LLM and AI API traff
 | | |
 | --- | --- |
 | Needs | PostgreSQL. Redis is optional; each edge keeps its own SQLite |
-| Licence | AI Studio |
-| Directory | `docker/ai-studio/` |
+| Licence | none for the Community Edition (AGPL-3.0, on GitHub); AI Studio licence for the Enterprise Edition |
+| Directory | `docker/ai-studio/`, `kubernetes/helm-ai-studio/` |
 
 Deployed independently of the API-management editions above.
 
@@ -93,11 +93,11 @@ Deployed independently of the API-management editions above.
 | Dashboard + MDCB | MDCB |
 | AI Studio | AI Studio |
 
-Free trial licences: https://tyk.io/sign-up/
+Free trial licences: <https://tyk.io/self-managed-trial/>
 
 ## Reference
 
-- https://tyk.io/docs/tyk-open-source.mdx
-- https://tyk.io/docs/tyk-self-managed
-- https://tyk.io/docs/tyk-multi-data-centre
-- https://tyk.io/docs/tyk-cloud
+- <https://tyk.io/docs/tyk-open-source.mdx>
+- <https://tyk.io/docs/tyk-self-managed>
+- <https://tyk.io/docs/tyk-multi-data-centre>
+- <https://tyk.io/docs/tyk-cloud>

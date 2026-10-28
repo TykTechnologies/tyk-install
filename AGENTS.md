@@ -17,6 +17,15 @@ on Claude Code. Shared skill files reference sibling skills by plain name only.
 | `tyk-deployment-runner` | Starting a deployment, bootstrapping it, and proving it works. |
 | `tyk-production-readiness` | Auditing or hardening a config against this repository's production guidance. |
 
+## What Is Free And What Needs A Licence
+
+Open source (free, MPL 2.0): Tyk Gateway and Tyk Pump. Paid (licence key required): Tyk Dashboard,
+Tyk Developer Portal, Tyk Operator and Tyk Multi Data Center Bridge (MDCB). A free trial licence
+comes from <https://tyk.io/self-managed-trial/> and arrives by email. The canonical comparison is
+<https://tyk.io/docs/apim>; state it that way and do not soften or extend it from memory. The open
+source Gateway is `tykio/tyk-gateway`; the licensed build is `tykio/tyk-gateway-ee`, and using the
+wrong one is the most common mistake on these paths.
+
 ## Deployment Runs
 
 - Never invent a deployment path. `skills/tyk-deployment-planner/references/topology-matrix.md`
@@ -74,11 +83,16 @@ than a recommendation, and on Helm an overlay replaces a list instead of merging
 `extraEnvs` deletes settings the base file had set — with `helm template` still exiting 0. Report
 findings and hand back edits for a human to apply to a copy of the file.
 
+`kubernetes/helm-self-managed/` and `kubernetes/helm-hybrid/` ship a committed
+`values-openshift.yaml`. Prefer it over a generated overlay, and pass it on every `helm upgrade`.
+
 ## Versions
 
-Component versions are pinned in each `.env.example` and in the Helm READMEs. Use the pinned
-versions unless the user asks otherwise, and never mix a Gateway and Dashboard from different
-minor releases. Record the versions actually deployed in any summary you produce.
+Component versions are pinned in each `.env.example` and in the Helm `values*.yaml` image tags,
+and a workflow in the Tyk docs repository raises a pull request here on every release to keep
+them at the latest stable tag. Read the pin from the file and never quote a version from memory.
+Use the pinned versions unless the user asks otherwise, never mix a Gateway and Dashboard from
+different minor releases, and record the versions actually deployed in any summary you produce.
 
 ## Verification
 

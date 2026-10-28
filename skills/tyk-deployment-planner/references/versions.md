@@ -1,20 +1,20 @@
 # Versions
 
-## Pinned set
+## Where the pins live
 
-Every **Docker and bare-metal** `.env.example` pins these. Use them unless the user asks
-otherwise. The Helm `.env.example` files do **not** carry version variables — on those paths the
-version lives in the image tags inside `values.yaml`, so read it there.
+This file carries no version numbers on purpose. Read the pin from the target directory:
 
-| Component | Version | Variable |
-| --- | --- | --- |
-| Gateway | `v5.14.0` | `GATEWAY_VERSION` |
-| Dashboard | `v5.14.0` | `DASHBOARD_VERSION` |
-| Pump | `v1.16.0` | `PUMP_VERSION` |
-| Developer Portal | `v1.18.0` | `PORTAL_VERSION` |
+- Docker and bare metal: `GATEWAY_VERSION`, `DASHBOARD_VERSION`, `PUMP_VERSION`, `PORTAL_VERSION`
+  and `MDCB_VERSION` in that directory's `.env.example`.
+- Helm: the `image.tag` values inside the directory's `values*.yaml`. The Helm `.env.example`
+  files carry chart versions only.
 
-Read the actual value from the target directory's `.env.example` rather than trusting this table —
-these are refreshed periodically, and the `.env.example` is the source of truth.
+A workflow in the Tyk docs repository (`sync-versions-to-tyk-install.yml`) opens a pull request
+here whenever a component is released, so the pins track the latest stable Docker Hub tag. Never
+quote a version from memory: a remembered number is the one most likely to be stale. When the user
+needs the latest release rather than the repository pin, resolve it live from Docker Hub
+(`https://hub.docker.com/v2/repositories/tykio/<image>/tags`) or the GitHub releases API, and say
+which source you used.
 
 ## Compatibility rules
 
@@ -31,11 +31,11 @@ these are refreshed periodically, and the `.env.example` is the source of truth.
   Gateway image tag move independently; pin both. Note the Helm READMEs currently pin only the
   Bitnami dependencies and cert-manager — the Tyk chart itself is installed unpinned, so
   `helm repo update` can change it. Pass `--version` yourself.
-- **The chart's default image tag trails this repository.** `tyk-helm/tyk-oss` shipped Gateway
-  `v5.9.1`, and `tyk-stack`/`tyk-control-plane` shipped `v5.13.1`, while this repo pins `v5.14.0`.
-  Every Helm values file here therefore pins its image tags explicitly — `helm-self-managed` 4,
-  `helm-hybrid` 2, `helm-mdcb` control-plane 4 and data-plane 2. Do not add more; check what
-  actually rendered:
+- **The chart's default image tag trails this repository.** tyk-charts 5.4.0 ships Gateway and
+  Dashboard `v5.13.2`, Pump `v1.17.0` and MDCB `v2.13.0`, behind the pins here. Every Helm values
+  file therefore pins its image tags explicitly — `helm-self-managed` 4, `helm-hybrid` 2,
+  `helm-oss` 1, `helm-mdcb` control-plane 4 and data-plane 2. Do not add more; check what actually
+  rendered:
   `helm template ... | grep -oE 'image: .*tyk.*'`
 
 ## Editions and image names
@@ -53,14 +53,14 @@ is a common and confusing mistake. The `-ee` build is the licensed Enterprise Ed
 Override in `.env` rather than editing `.env.example`:
 
 ```bash
-GATEWAY_VERSION=v5.13.1
-DASHBOARD_VERSION=v5.13.1
+GATEWAY_VERSION=vX.Y.Z      # the same tag for both: Gateway and Dashboard never split minors
+DASHBOARD_VERSION=vX.Y.Z
 ```
 
 For Helm, pass `--version` to `helm upgrade --install` and set the image tag in an overlay.
 
 Before moving anyone to a newer version, check the release notes for breaking changes and for the
-minimum Redis and PostgreSQL versions: https://tyk.io/docs/developer-support/release-notes/overview
+minimum Redis and PostgreSQL versions: <https://tyk.io/docs/developer-support/release-notes/overview>
 
 ## Recording what was deployed
 

@@ -26,7 +26,7 @@ services:
 
   tyk-gateway:
     restart: unless-stopped
-    image: tykio/tyk-gateway:${GATEWAY_VERSION:-v5.14.0}
+    image: tykio/tyk-gateway:${GATEWAY_VERSION:-v5.16.0}
     container_name: tyk-gateway-oss
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
@@ -59,7 +59,7 @@ services:
   # and set TYK_GW_ENABLEANALYTICS=true in confs/tyk.env.
   tyk-pump:
     restart: unless-stopped
-    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.16.0}
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.18.0}
     container_name: tyk-pump-oss
     profiles: [ analytics ]
     env_file:

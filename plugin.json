@@ -2,18 +2,25 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "tyk-install",
   "version": "1.0.0",
-  "description": "Deploy, verify, and production-harden Tyk with an AI coding agent. Plans a deployment topology across Docker, Kubernetes/Helm, OpenShift, and bare metal for OSS, Self-Managed, hybrid, and MDCB editions, runs it, proves it works with executable evidence, and applies the production and platform guidance this repository already carries as annotated config.",
+  "description": "Deploy, verify, and production-harden Tyk with an AI coding agent. Plans a deployment topology across Docker, Kubernetes/Helm, OpenShift, and bare metal for the open source Gateway (no licence), Self-Managed, hybrid, MDCB and AI Studio, runs it, proves it works with executable evidence, and applies the production and platform guidance this repository already carries as annotated config.",
   "homepage": "https://tyk.io/docs/",
   "repository": "https://github.com/TykTechnologies/tyk-install",
   "keywords": [
     "tyk",
     "api-gateway",
+    "api-management",
+    "open-source",
     "deployment",
-    "docker",
+    "docker-compose",
     "kubernetes",
     "helm",
     "openshift",
+    "bare-metal",
     "mdcb",
-    "production"
+    "ai-gateway",
+    "production",
+    "claude-code",
+    "codex",
+    "agent-skills"
   ]
 }

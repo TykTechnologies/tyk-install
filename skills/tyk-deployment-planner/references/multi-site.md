@@ -82,7 +82,7 @@ Record the answers in the deployment plan. Several change the topology, not just
 
 ## Reference
 
-- https://tyk.io/docs/tyk-multi-data-centre
-- https://tyk.io/docs/planning-for-production
+- <https://tyk.io/docs/tyk-multi-data-centre>
+- <https://tyk.io/docs/planning-for-production>
 - Artifacts and the RPC troubleshooting table: [`../../../docker/mdcb/README.md`](../../../docker/mdcb/README.md)
 - Kubernetes equivalents: [`../../../kubernetes/helm-mdcb/README.md`](../../../kubernetes/helm-mdcb/README.md)

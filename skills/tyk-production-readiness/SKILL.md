@@ -90,8 +90,10 @@ So for production work: report findings, and hand the user edits to make to a co
 file, preserving its existing lists. Never present a generated production overlay as hardened.
 
 The OpenShift overlay is exempt: those blocks are genuine "uncomment to use" recommendations and
-graft as new mappings the base file does not define, so neither problem applies. Validate it anyway,
-and check the env-var count is unchanged:
+graft as new mappings the base file does not define, so neither problem applies. Before generating
+one, check whether the target directory already ships `values-openshift.yaml`
+(`kubernetes/helm-self-managed/` and `kubernetes/helm-hybrid/` do, for tyk-charts 5.4.0 or later)
+and prefer that. When you do generate one, validate it and check the env-var count is unchanged:
 
 ```bash
 python3 scripts/profiles.py apply kubernetes/helm-self-managed/values.yaml \
@@ -117,7 +119,7 @@ helm template check tyk-helm/tyk-stack -f kubernetes/helm-self-managed/values.ya
   it does not — the judgement belongs to the person who owns the service.
 - Do not invent thresholds. If the repository's guidance gives no number and
   `references/hardening.md` gives none, say the number needs sizing work and cite
-  https://tyk.io/docs/planning-for-production.
+  <https://tyk.io/docs/planning-for-production>.
 
 ## Completion Contract
 

@@ -1,12 +1,7 @@
-# Tyk Install
+@AGENTS.md
 
-This repository supports the Claude Code CLI, the Codex CLI, and any client that implements
-[Agent Plugins](https://agent-plugins.org) 1.0.0.
-
-The agent contract is maintained in a single place: read [AGENTS.md](AGENTS.md) and follow it
-verbatim. Do not duplicate those rules here, so the two files cannot drift.
-
-Claude-specific notes:
+Claude-specific notes (the contract itself lives in AGENTS.md, imported above, so the two cannot
+drift):
 
 - Invoke the bundled skills as `/tyk-deployment-planner`, `/tyk-deployment-runner`, and
   `/tyk-production-readiness`, or let the skill descriptions trigger them.

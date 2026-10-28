@@ -19,7 +19,7 @@ services:
 
   tyk-gateway:
     restart: unless-stopped
-    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.14.0}
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.16.0}
     container_name: tyk-gateway-dp
     # Defaults to 8081 so a data plane can run alongside a control plane on one
     # host without colliding on 8080.
@@ -41,7 +41,7 @@ services:
 
   tyk-pump:
     restart: unless-stopped
-    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.16.0}
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.18.0}
     container_name: tyk-pump-dp
     env_file:
       - ./confs/pump.env

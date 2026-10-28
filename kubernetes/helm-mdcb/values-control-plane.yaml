@@ -68,11 +68,11 @@ global:
 
 tyk-mdcb:
   mdcb:
-    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-mdcb-docker
-      tag: v2.12.0
+      tag: v2.14.0
 
     # SECURITY: Supply via global.secrets.useSecretName (key MDCBLicense) rather than here
     license: ""
@@ -109,11 +109,11 @@ tyk-mdcb:
 
 tyk-dashboard:
   dashboard:
-    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-dashboard
-      tag: v5.14.0
+      tag: v5.16.0
 
     replicaCount: 1 # PROD: Two or more. The Dashboard serves operators, not request traffic, so it does not scale with RPS.
     resources: {}
@@ -145,11 +145,11 @@ tyk-dashboard:
 
 tyk-gateway:
   gateway:
-    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-gateway-ee
-      tag: v5.14.0
+      tag: v5.16.0
 
     replicaCount: 1 # PROD: Two or more behind a load balancer; gateways are stateless
     resources: {}
@@ -185,11 +185,11 @@ tyk-gateway:
 
 tyk-pump:
   pump:
-    # Pinned: chart 5.3.0 ships an older tag than this repository pins, and an
+    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-pump-docker-pub
-      tag: v1.16.0
+      tag: v1.18.0
 
     replicaCount: 1
     resources: {}

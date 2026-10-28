@@ -38,7 +38,7 @@ services:
 
   tyk-dashboard:
     restart: unless-stopped
-    image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.14.0}
+    image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.16.0}
     container_name: tyk-dashboard-cp
     ports:
       - "${DASHBOARD_PORT:-3000}:3000"
@@ -58,7 +58,7 @@ services:
   # PostgreSQL as the Dashboard, and needs its own licence.
   tyk-mdcb:
     restart: unless-stopped
-    image: tykio/tyk-mdcb-docker:${MDCB_VERSION:-v2.12.0}
+    image: tykio/tyk-mdcb-docker:${MDCB_VERSION:-v2.14.0}
     container_name: tyk-mdcb-cp
     ports:
       - "${MDCB_PORT:-9091}:9091"
@@ -79,7 +79,7 @@ services:
   # plane should only manage, never serve.
   tyk-gateway:
     restart: unless-stopped
-    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.14.0}
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.16.0}
     container_name: tyk-gateway-cp
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
@@ -95,7 +95,7 @@ services:
 
   tyk-pump:
     restart: unless-stopped
-    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.16.0}
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.18.0}
     container_name: tyk-pump-cp
     env_file:
       - ./confs/pump.env

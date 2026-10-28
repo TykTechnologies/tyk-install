@@ -59,7 +59,7 @@ serious than any `# PROD:` marker.
 - **Isolate the control API.** By default the Gateway's management API shares the traffic port,
   so anything that reaches your APIs can reach `/tyk/`. Set `TYK_GW_CONTROLAPIPORT` and
   `TYK_GW_CONTROLAPIHOSTNAME`, and do not expose that port publicly. See
-  https://tyk.io/docs/planning-for-production#change-your-control-port
+  <https://tyk.io/docs/planning-for-production#change-your-control-port>
 - **TLS on the edge**, and to Redis and PostgreSQL if they cross a network boundary.
 - **Never disable certificate validation in production.** Every `SSLINSECURESKIPVERIFY` must stay
   `false`; the markers say so, and it is worth restating because the dev configs rely on it.
@@ -106,13 +106,13 @@ Analytics is the usual cause of "Tyk got slow" and "Redis filled up".
 
 Do not invent thresholds. If the repository's markers give no number and nothing here does either,
 say the number needs sizing work and point at
-https://tyk.io/docs/planning-for-production rather than guessing a value the user might deploy.
+<https://tyk.io/docs/planning-for-production> rather than guessing a value the user might deploy.
 
 Do not report a configuration as "production ready". Report which guidance it satisfies and which
 it does not; the judgement belongs to whoever owns the service.
 
 ## Reference
 
-- https://tyk.io/docs/planning-for-production
-- https://tyk.io/docs/api-management/dashboard-configuration
-- https://tyk.io/docs/tyk-pump
+- <https://tyk.io/docs/planning-for-production>
+- <https://tyk.io/docs/api-management/dashboard-configuration>
+- <https://tyk.io/docs/tyk-pump>

@@ -176,7 +176,7 @@ sudo systemctl restart tyk-gateway
 ./verify.sh --components gateway --route /your-listen-path/
 ```
 
-Check the release notes first: https://tyk.io/docs/developer-support/release-notes/overview
+Check the release notes first: <https://tyk.io/docs/developer-support/release-notes/overview>
 
 ## Uninstall
 
@@ -224,7 +224,7 @@ Dashboard and Pump on bare metal are not yet verified.
 
 ## Reference
 
-- https://tyk.io/docs/tyk-self-managed/install/linux
-- https://packagecloud.io/tyk
-- https://tyk.io/docs/tyk-configuration-reference
-- https://tyk.io/docs/planning-for-production
+- <https://tyk.io/docs/tyk-self-managed/install/linux>
+- <https://packagecloud.io/tyk>
+- <https://tyk.io/docs/tyk-configuration-reference>
+- <https://tyk.io/docs/planning-for-production>

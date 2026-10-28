@@ -67,12 +67,14 @@ Everything above, plus:
 
 - The `oc` CLI, and a user able to create Routes.
 - Cluster-admin for the cert-manager install, if the Operator is used.
-- The containers must not run as a fixed UID. Activate the bundled overlay rather than editing
-  values by hand:
+- The containers must not run as a fixed UID. Layer the committed overlay rather than editing
+  values by hand — `kubernetes/helm-self-managed/values-openshift.yaml` and
+  `kubernetes/helm-hybrid/values-openshift.yaml` exist for that (tyk-charts 5.4.0 or later). For
+  `helm-oss` and `helm-mdcb`, generate one:
 
   ```bash
   python3 skills/tyk-production-readiness/scripts/profiles.py \
-    apply kubernetes/helm-self-managed/values.yaml --profile openshift -o openshift-values.yaml
+    apply kubernetes/helm-oss/values.yaml --profile openshift -o openshift-values.yaml
   ```
 
 - Bitnami PostgreSQL needs SCC-compatible settings; the commented `--set` flags are in the Helm
@@ -83,7 +85,7 @@ Everything above, plus:
 
 ## Licences
 
-Free trials: https://tyk.io/sign-up/
+Free trials: <https://tyk.io/self-managed-trial/>
 
 | Variable | Needed for |
 | --- | --- |
@@ -98,5 +100,5 @@ their own; do not copy one out of an unrelated deployment.
 
 ## Reference
 
-- https://tyk.io/docs/tyk-self-managed#installation-options
-- https://tyk.io/docs/planning-for-production
+- <https://tyk.io/docs/tyk-self-managed#installation-options>
+- <https://tyk.io/docs/planning-for-production>

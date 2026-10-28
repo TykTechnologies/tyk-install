@@ -89,6 +89,6 @@ reaches an upstream:
 
 ## Reference
 
-- https://tyk.io/docs/dashboard-admin-api.mdx
-- https://tyk.io/docs/tyk-dashboard-api.mdx
-- https://tyk.io/docs/getting-started
+- <https://tyk.io/docs/dashboard-admin-api.mdx>
+- <https://tyk.io/docs/tyk-dashboard-api.mdx>
+- <https://tyk.io/docs/getting-started>

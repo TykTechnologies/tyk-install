@@ -40,6 +40,7 @@ project directory from there — so the licence goes in **`docker/self-managed/.
 | MDCB control plane | `kubernetes/helm-mdcb/values-control-plane.yaml` | `tyk-helm/tyk-control-plane` | Dashboard, MDCB | `bundled` |
 | MDCB data plane | `kubernetes/helm-mdcb/values-data-plane.yaml` | `tyk-helm/tyk-data-plane` | inherited via MDCB | `bundled` |
 | Operator only | `kubernetes/standalone-operator/` | `tyk-helm/tyk-operator` | Operator | `bundled` |
+| AI Studio | `kubernetes/helm-ai-studio/` | `tyk-helm/tyk-ai-studio` plus optional `values-*.yaml` add-ons | none for Community Edition, AI Studio for Enterprise | `bundled` |
 
 **`kubernetes/helm-self-managed/values.yaml` enables the Tyk Operator** (`operator: true`). As
 shipped, that row therefore needs a **third licence** the Licence column above would not otherwise
@@ -69,22 +70,37 @@ including macOS, for reviewing the plan.
 Note the packages are not published for every distribution release. Pin the upstream codename with
 `--os`/`--dist` when yours is newer than Tyk's builds.
 
+## Add-ons
+
+| Add-on | Directory | Applies to | Status |
+| --- | --- | --- | --- |
+| Observability, Docker overlay | `docker/observability/` | Self-Managed and hybrid on Docker, via `docker-compose.otel.yml` | `bundled-tested` (CI starts it) |
+| Observability, Helm overlays | `kubernetes/observability/` | Self-Managed and hybrid on Helm, via each directory's `values-otel.yaml` and a post-renderer | `bundled` |
+| Observability, shared assets | `observability/` | Dashboards, alert rules and collector config used by both platforms | `bundled` |
+| Operator for one namespace | `kubernetes/helm-self-managed/values-operator-namespaced.yaml` | Self-Managed on Helm without cluster-admin | `bundled` |
+
+An add-on never changes the row above; it layers on it. Read the add-on's own README before
+including it in a plan.
+
 ## Platform overlays
 
-OpenShift is not a separate directory. It is an overlay carried inside the Helm values as
-`# Required for deploying on RedHat OpenShift` blocks, activated with:
+OpenShift is not a separate directory. `kubernetes/helm-self-managed/` and
+`kubernetes/helm-hybrid/` ship a committed `values-openshift.yaml` (tyk-charts 5.4.0 or later)
+that turns every securityContext block off so the SCC assigns UIDs; layer it on the base values,
+and pass it again on every later `helm upgrade`. Their READMEs have a "Deploying on Red Hat
+OpenShift" section with the exact commands.
+
+`helm-oss` and `helm-mdcb` carry the same settings only as commented
+`# Required for deploying on RedHat OpenShift` blocks. Generate their overlay instead:
 
 ```bash
 python3 skills/tyk-production-readiness/scripts/profiles.py \
-  apply kubernetes/helm-self-managed/values.yaml --profile openshift -o openshift-values.yaml
+  apply kubernetes/helm-oss/values.yaml --profile openshift -o openshift-values.yaml
 ```
 
 Then install with both files, base first. OpenShift also needs `Route` rather than `Ingress` — the
-`oc expose svc` recipes are in each Helm README under "OpenShift Routes".
-
-Overlay coverage: `kubernetes/helm-self-managed/values.yaml` has 5 blocks,
-`kubernetes/helm-hybrid/values.yaml` has 2. `helm-oss` and `helm-mdcb` carry them too. There is no
-OpenShift overlay for the Docker paths, because Docker does not have SCCs.
+`oc expose svc` recipes are in each Helm README under "OpenShift Routes". There is no OpenShift
+overlay for the Docker paths, because Docker does not have SCCs.
 
 ## Not supported
 
@@ -122,6 +138,7 @@ it fits otherwise. Work through these in order and stop at the first that decide
      jurisdiction. Ask *why* there are two sites before deciding.
    - If MDCB is right, read `multi-site.md` before planning — MDCB does not by itself give two
      symmetric sites, and the difference matters.
-5. **RedHat OpenShift?** Pick the Helm row, then add the `openshift` profile.
+5. **RedHat OpenShift?** Pick the Helm row, then layer its committed `values-openshift.yaml`
+   (Self-Managed, hybrid) or generate the overlay with the `openshift` profile (OSS, MDCB).
 
 Record the chosen row, its status, the licences required, and the pinned versions in the plan.

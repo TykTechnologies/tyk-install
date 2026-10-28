@@ -20,7 +20,7 @@ Self-Managed control plane already gives you that, with far fewer moving parts. 
 
 ## Architecture
 
-```
+```text
    CONTROL PLANE                          DATA PLANE (xN)
    Dashboard  ──┐                         Gateway (RPC mode)
    MDCB :9091 ──┼── Redis                 Pump
@@ -43,7 +43,7 @@ Two are required, and they are separate:
 | `TYK_MDCB_LICENSE` | MDCB itself |
 
 Data planes need no licence of their own; entitlement arrives over RPC. Trials:
-https://tyk.io/sign-up/
+<https://tyk.io/self-managed-trial/>
 
 ## 1. Start the control plane
 
@@ -112,7 +112,8 @@ control plane on the same host.
 
 ## 4. Verify the bridge
 
-Verified on Docker Desktop / OrbStack with MDCB v2.12.0 and Tyk 5.14.0: control plane healthy,
+Verified on Docker Desktop / OrbStack in August 2026 with MDCB v2.12.0 and Tyk 5.14.0 (the pins
+have since moved to the current release): control plane healthy,
 data plane logged in over RPC, an API created on the control plane propagated to the data plane,
 and a request served through the data-plane gateway.
 
@@ -169,7 +170,7 @@ cd ../control-plane && docker compose down -v
 
 ## Reference
 
-- https://tyk.io/docs/tyk-multi-data-centre
-- https://tyk.io/docs/tyk-mdcb-api.mdx
+- <https://tyk.io/docs/tyk-multi-data-centre>
+- <https://tyk.io/docs/tyk-mdcb-api.mdx>
 - Kubernetes equivalent: [`../../kubernetes/helm-mdcb/`](../../kubernetes/helm-mdcb/)
 - Tyk Cloud control plane instead of self-hosted: [`../hybrid/`](../hybrid/)
