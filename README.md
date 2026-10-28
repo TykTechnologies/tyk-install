@@ -90,8 +90,22 @@ under `skills/`:
 | `tyk-deployment-runner` | Deploys, bootstraps, and verifies with a request through the gateway rather than container status. |
 | `tyk-production-readiness` | Audits a config against the production guidance in these files and can generate the OpenShift overlay. |
 
-To use the skills from any directory, run `./install-plugin.sh --engine claude` (or `codex`, or
-`both`). The production, performance, security and OpenShift guidance lives as marker comments
+To use the skills from any directory, install the repository as a plugin. It is its own
+marketplace for both CLIs:
+
+```bash
+# Claude Code
+claude plugin marketplace add TykTechnologies/tyk-install
+claude plugin install tyk-install@tyk-install
+
+# Codex CLI
+codex plugin marketplace add TykTechnologies/tyk-install
+codex plugin add tyk-install@tyk-install
+```
+
+Without a plugin client, `./install-plugin.sh --engine claude` (or `codex`, or `both`) links the
+skills into the agent's skills directory instead. The production, performance, security and
+OpenShift guidance lives as marker comments
 beside the settings it applies to (`# PROD:`, `# PROD/PERFORMANCE:`, `# SECURITY:`,
 `# Required for deploying on RedHat OpenShift`), and one script reads them so the advice cannot
 drift from the configuration:
@@ -126,6 +140,8 @@ Located in `docker/utils/`:
 ```text
 tyk-install/
 ├── plugin.json            # Agent Plugins 1.0.0 manifest; this root is the plugin root
+├── .claude-plugin/        # Claude Code plugin and marketplace manifests for the same root
+├── .codex-plugin/, .agents/ # Codex plugin and marketplace manifests for the same root
 ├── AGENTS.md              # The agent contract
 ├── install-plugin.sh      # Optional: link the skills into an agent skills directory
 ├── skills/                # Agent skills: deployment planner, deployment runner, production readiness

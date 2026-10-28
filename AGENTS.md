@@ -6,8 +6,13 @@ Help someone deploy Tyk into their own environment, prove it works, and harden i
 using the deployment configurations in this repository.
 
 Both the Codex CLI and the Claude Code CLI are supported, along with any client implementing
-[Agent Plugins](https://agent-plugins.org) 1.0.0. Invoke a skill with `$name` on Codex or `/name`
-on Claude Code. Shared skill files reference sibling skills by plain name only.
+[Agent Plugins](https://agent-plugins.org) 1.0.0. Working inside a clone is enough: the skills
+under `skills/` load from here. The repository is also its own plugin marketplace for both CLIs
+(`.claude-plugin/`, `.codex-plugin/` and `.agents/plugins/` describe the same root), so
+`claude plugin install tyk-install@tyk-install` and `codex plugin add tyk-install@tyk-install`
+install the same skills for use anywhere. Invoke a skill with `$name` on Codex or `/name` on
+Claude Code (namespaced as `tyk-install:name` when installed as a plugin). Shared skill files
+reference sibling skills by plain name only.
 
 ## Skills
 
@@ -97,6 +102,6 @@ different minor releases, and record the versions actually deployed in any summa
 ## Verification
 
 Run `./install-plugin.sh --check` after changing plugin structure, and
-`python3 validate_plugins.py` to check Agent Plugins conformance and that every path named in the
-topology matrix exists. Do not claim completion if either fails; fix the failure or report the
+`python3 validate_plugins.py` to check Agent Plugins conformance, that the Claude Code and Codex
+manifests describe the same plugin, and that every path named in the topology matrix exists. Do not claim completion if either fails; fix the failure or report the
 exact blocker.

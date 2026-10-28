@@ -6,5 +6,8 @@ drift):
 - Invoke the bundled skills as `/tyk-deployment-planner`, `/tyk-deployment-runner`, and
   `/tyk-production-readiness`, or let the skill descriptions trigger them.
 - Working inside a clone of this repository is enough — no install step is required.
-- To make the skills available from any directory, run `./install-plugin.sh --engine claude`,
-  which links each skill into `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`.
+- To make the skills available from any directory, install the repository as a plugin:
+  `claude plugin marketplace add TykTechnologies/tyk-install` then
+  `claude plugin install tyk-install@tyk-install`. The skills are then namespaced, for example
+  `/tyk-install:tyk-deployment-planner`. `./install-plugin.sh --engine claude` is the
+  symlink alternative, into `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`.

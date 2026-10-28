@@ -189,6 +189,56 @@ def validate_matrix(r, path):
     print(f"       ({len(seen)} distinct paths checked against the matrix)")
 
 
+NATIVE = {
+    "Claude Code plugin": ".claude-plugin/plugin.json",
+    "Claude Code marketplace": ".claude-plugin/marketplace.json",
+    "Codex plugin": ".codex-plugin/plugin.json",
+    "Codex marketplace": ".agents/plugins/marketplace.json",
+}
+
+
+def validate_native_packaging(r, path):
+    """The neutral manifest is the contract; these are what `claude plugin install`
+    and `codex plugin add` actually read. They must describe the same plugin."""
+    with open(os.path.join(path, "plugin.json"), encoding="utf-8") as f:
+        portable = json.load(f)
+    name, version = portable.get("name"), portable.get("version")
+    loaded = {}
+    for label, rel in NATIVE.items():
+        full = os.path.join(path, rel)
+        if not r.check(os.path.isfile(full), f"{label} manifest exists at {rel}"):
+            continue
+        try:
+            with open(full, encoding="utf-8") as f:
+                loaded[label] = json.load(f)
+        except ValueError as e:
+            r.check(False, f"{label} manifest is valid JSON", str(e))
+    for label in ("Claude Code plugin", "Codex plugin"):
+        m = loaded.get(label)
+        if m is None:
+            continue
+        r.check(m.get("name") == name, f"{label} name matches plugin.json",
+                f"{m.get('name')!r} != {name!r}")
+        r.check(m.get("version") == version, f"{label} version matches plugin.json",
+                f"{m.get('version')!r} != {version!r}")
+        r.check(m.get("skills") == "./skills/", f"{label} loads skills from ./skills/",
+                repr(m.get("skills")))
+    for label in ("Claude Code marketplace", "Codex marketplace"):
+        m = loaded.get(label)
+        if m is None:
+            continue
+        entries = m.get("plugins") or []
+        r.check(len(entries) == 1 and entries[0].get("name") == name,
+                f"{label} lists exactly this plugin", repr([e.get("name") for e in entries]))
+        src = entries[0].get("source") if entries else None
+        root = src == "./" or (isinstance(src, dict) and src.get("path") == "./")
+        r.check(root, f"{label} entry points at the repository root", repr(src))
+    claude_mp = loaded.get("Claude Code marketplace")
+    if claude_mp and claude_mp.get("plugins"):
+        r.check(claude_mp["plugins"][0].get("version") == version,
+                "Claude Code marketplace version matches plugin.json")
+
+
 def main():
     if not os.path.isfile(os.path.join(REPO, "plugin.json")):
         print("no plugin.json at the repository root")
@@ -199,6 +249,7 @@ def main():
         validate_containment(r, REPO)
         validate_skills(r, REPO)
         validate_matrix(r, REPO)
+        validate_native_packaging(r, REPO)
     r.print()
 
     bad, total = len(r.failed), len(r.checks)
