@@ -1,0 +1,161 @@
+# ============================================================================
+# TYK MDCB DATA PLANE HELM VALUES
+# ============================================================================
+# For the tyk-helm/tyk-data-plane chart, pointed at a SELF-HOSTED MDCB control
+# plane. For a Tyk Cloud control plane, use ../helm-hybrid/ instead - the only
+# real difference is where the connection string points and who runs MDCB.
+#
+# comments describing PRODUCTION and PERFORMANCE tuning recommendations.
+# Default values are set for DEVELOPMENT environments.
+#
+# This data plane needs no licence of its own; entitlement comes from the
+# control plane over RPC. It DOES need three identifiers from the control-plane
+# Dashboard. Supply them as a secret rather than in this file:
+#
+#   kubectl create secret generic tyk-data-plane-conf -n tyk-dp \
+#     --from-literal=APISecret=<gateway-api-secret> \
+#     --from-literal=orgId=<organisation-id> \
+#     --from-literal=userApiKey=<dashboard-user-api-key> \
+#     --from-literal=groupID=<name-for-this-cluster>
+#
+# All four must be correct. One wrong value fails the handshake with "access
+# denied", which is indistinguishable from a licence problem in the logs.
+# ============================================================================
+
+global:
+  remoteControlPlane:
+    # The MDCB service of your control plane. Reachable from THIS cluster, which
+    # usually means a LoadBalancer or gRPC-capable Ingress rather than a
+    # ClusterIP - the two planes are typically in different clusters.
+    connectionString: mdcb-svc-tyk-cp-tyk-mdcb.tyk.svc:9091
+
+    # SECURITY: Prefer useSecretName over the plaintext values below.
+    useSecretName: "tyk-data-plane-conf"
+    # orgId: ""
+    # userApiKey: ""
+    # groupID: ""
+
+    # PROD: Set to true once MDCB serves TLS, and keep sslInsecureSkipVerify false.
+    # RPC between planes usually crosses a network boundary.
+    useSSL: false
+    sslInsecureSkipVerify: true # PROD: Set to false and install the CA instead
+
+  secrets:
+    # SECURITY: Change to a strong 32+ character string - this is the Gateway API credential
+    APISecret: CHANGEME
+    useSecretName: "tyk-data-plane-conf"
+
+  redis:
+    # The data plane's OWN local Redis. Must NOT be the control plane's: keeping
+    # local state is what lets this plane keep serving through a control-plane
+    # outage, which is the point of MDCB.
+    addrs:
+      - tyk-redis-master.tyk-dp.svc:6379
+    # pass: "" # SECURITY: Set a Redis password for any deployment that is not a local throwaway
+    # useSSL: true # PROD: Enable TLS for Redis connections
+    # sslInsecureSkipVerify: false # PROD: Keep false to validate Redis TLS certificates
+    # enableCluster: true # PROD/PERFORMANCE: Use Redis Cluster for high availability and performance
+    storage:
+      database: 0
+
+  components:
+    pump: true
+
+  tls:
+    gateway: false # PROD: Set to true and provide a certificate
+    useDefaultTykCertificate: true # PROD: Set to false when supplying your own certificate
+
+tyk-gateway:
+  gateway:
+    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
+    # unpinned chart can change version on `helm repo update`.
+    image:
+      repository: tykio/tyk-gateway-ee
+      tag: v5.16.0
+
+    # PROD: Two or more behind a load balancer. This is the component that
+    # carries request traffic, and the only one that scales with RPS.
+    replicaCount: 1
+
+    kind: Deployment
+
+    service:
+      type: ClusterIP # PROD: Use LoadBalancer or an Ingress to accept real traffic
+
+    # PROD: Always set requests and limits, sized from measurement.
+    resources: {}
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
+    extraEnvs:
+      - name: TYK_GW_LOGLEVEL
+        value: "info" # PROD: Set to "error" to reduce log volume
+
+      # Must match the control plane's MDCB setting, or keys will not resolve.
+      - name: TYK_GW_HASHKEYS
+        value: "true"
+
+      # PROD: Enable so this plane keeps a keyspace copy and survives a
+      # control-plane outage. Pair with global.mdcbSynchronizer on the control plane.
+      # - name: TYK_GW_SLAVEOPTIONS_SYNCHRONISERENABLED
+      #   value: "true"
+      # - name: TYK_GW_SLAVEOPTIONS_KEYSPACESYNCINTERVAL
+      #   value: "10" # Seconds between keyspace syncs
+
+      # - name: TYK_GW_SLAVEOPTIONS_RPCPOOLSIZE
+      #   value: "5" # PROD/PERFORMANCE: Raise for a large gateway count in this plane
+      # - name: TYK_GW_MAXIDLECONNSPERHOST
+      #   value: "10000" # PROD/PERFORMANCE: Set high value (>=10000) for high-throughput scenarios
+      # - name: TYK_GW_ANALYTICSCONFIG_ENABLEDETAILEDRECORDING
+      #   value: "false" # PROD: Keep false - stores full bodies, expensive and may capture sensitive payloads
+
+tyk-pump:
+  pump:
+    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
+    # unpinned chart can change version on `helm repo update`.
+    image:
+      repository: tykio/tyk-pump-docker-pub
+      tag: v1.18.0
+
+    replicaCount: 1
+    resources: {}
+
+    # -------------------------------------------------------------------------
+    # Required for deploying on RedHat OpenShift
+    # -------------------------------------------------------------------------
+    # securityContext:
+    #   runAsUser: null
+    #   fsGroup: null
+    #   runAsNonRoot: true
+    # containerSecurityContext:
+    #   runAsNonRoot: true
+    #   runAsUser: null
+    #   allowPrivilegeEscalation: false
+    #   privileged: false
+    #   readOnlyRootFilesystem: true
+    #   seccompProfile:
+    #     type: RuntimeDefault
+    #   capabilities:
+    #     drop:
+    #       - ALL
+
+    extraEnvs:
+      - name: TYK_PMP_LOGLEVEL
+        value: "info" # PROD: Set to "error" to reduce log volume

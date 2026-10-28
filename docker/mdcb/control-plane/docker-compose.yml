@@ -1,0 +1,123 @@
+services:
+  tyk-redis:
+    restart: unless-stopped
+    image: redis:7.2.0
+    container_name: tyk-redis-cp
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data-cp:/data
+    networks:
+      - tyk-cp
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  tyk-postgres:
+    restart: unless-stopped
+    image: postgres:16-alpine
+    container_name: tyk-postgres-cp
+    environment:
+      POSTGRES_USER: tykuser
+      POSTGRES_PASSWORD: tykSecurePass123
+      POSTGRES_DB: tyk_analytics
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data-cp:/var/lib/postgresql/data
+      - ../../utils/dbs.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U tykuser -d tyk_analytics" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tyk-cp
+
+  tyk-dashboard:
+    restart: unless-stopped
+    image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.16.0}
+    container_name: tyk-dashboard-cp
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    env_file:
+      - ./confs/tyk_analytics.env
+    volumes:
+      - tyk-dashboard-certs-cp:/opt/tyk-dashboard/certs
+    networks:
+      - tyk-cp
+    depends_on:
+      tyk-redis:
+        condition: service_healthy
+      tyk-postgres:
+        condition: service_healthy
+
+  # MDCB serves the data planes over RPC on 9091. It reads the same Redis and
+  # PostgreSQL as the Dashboard, and needs its own licence.
+  tyk-mdcb:
+    restart: unless-stopped
+    image: tykio/tyk-mdcb-docker:${MDCB_VERSION:-v2.14.0}
+    container_name: tyk-mdcb-cp
+    ports:
+      - "${MDCB_PORT:-9091}:9091"
+    env_file:
+      - ./confs/mdcb.env
+    networks:
+      - tyk-cp
+    depends_on:
+      tyk-redis:
+        condition: service_healthy
+      tyk-postgres:
+        condition: service_healthy
+      tyk-dashboard:
+        condition: service_started
+
+  # A control-plane gateway is optional: it lets you serve traffic from the
+  # control plane site as well as manage configuration. Remove it if the control
+  # plane should only manage, never serve.
+  tyk-gateway:
+    restart: unless-stopped
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.16.0}
+    container_name: tyk-gateway-cp
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    env_file:
+      - ./confs/tyk.env
+    volumes:
+      - tyk-gateway-certs-cp:/opt/tyk-gateway/certs
+    networks:
+      - tyk-cp
+    depends_on:
+      - tyk-dashboard
+      - tyk-redis
+
+  tyk-pump:
+    restart: unless-stopped
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.18.0}
+    container_name: tyk-pump-cp
+    env_file:
+      - ./confs/pump.env
+    networks:
+      - tyk-cp
+    depends_on:
+      tyk-redis:
+        condition: service_healthy
+      tyk-postgres:
+        condition: service_healthy
+
+networks:
+  tyk-cp:
+    driver: bridge
+    name: tyk-cp
+
+volumes:
+  redis-data-cp:
+    name: tyk-cp-redis-data
+  postgres-data-cp:
+    name: tyk-cp-postgres-data
+  tyk-gateway-certs-cp:
+    name: tyk-cp-gateway-certs
+  tyk-dashboard-certs-cp:
+    name: tyk-cp-dashboard-certs

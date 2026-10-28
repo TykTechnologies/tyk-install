@@ -1,0 +1,20 @@
+{
+  "name": "tyk-install",
+  "interface": {
+    "displayName": "Tyk Install"
+  },
+  "plugins": [
+    {
+      "name": "tyk-install",
+      "category": "Developer Tools",
+      "policy": {
+        "authentication": "ON_INSTALL",
+        "installation": "AVAILABLE"
+      },
+      "source": {
+        "source": "local",
+        "path": "./"
+      }
+    }
+  ]
+}

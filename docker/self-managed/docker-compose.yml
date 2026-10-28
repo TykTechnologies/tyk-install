@@ -4,7 +4,7 @@ services:
     image: redis:7.2.0
     container_name: tyk-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -24,7 +24,7 @@ services:
       POSTGRES_PASSWORD: tykSecurePass123
       POSTGRES_DB: tyk_analytics
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ../utils/dbs.sql:/docker-entrypoint-initdb.d/01-init.sql
@@ -41,7 +41,7 @@ services:
     image: tykio/tyk-dashboard:${DASHBOARD_VERSION:-v5.16.0}
     container_name: tyk-dashboard
     ports:
-      - "3000:3000"
+      - "${DASHBOARD_PORT:-3000}:3000"
     env_file:
       - ./confs/tyk_analytics.env
     volumes:
@@ -59,7 +59,7 @@ services:
     image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.16.0}
     container_name: tyk-gateway
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
     env_file:
       - ./confs/tyk.env
     volumes:
@@ -90,7 +90,7 @@ services:
     image: tykio/portal:${PORTAL_VERSION:-v1.20.0}
     container_name: tyk-portal
     ports:
-      - "3001:3001"
+      - "${PORTAL_PORT:-3001}:3001"
     networks:
       - tyk
     env_file:

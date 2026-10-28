@@ -1,0 +1,27 @@
+{
+  "name": "tyk-install",
+  "owner": {
+    "name": "Tyk Technologies",
+    "url": "https://github.com/TykTechnologies"
+  },
+  "metadata": {
+    "description": "Deploy, verify and production-harden Tyk with an AI coding agent.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "tyk-install",
+      "source": "./",
+      "description": "Deploy, verify, and production-harden Tyk with an AI coding agent: open source Gateway (no licence), Self-Managed, hybrid, MDCB and AI Studio on Docker, Kubernetes/Helm, OpenShift and bare metal.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Tyk Technologies",
+        "url": "https://github.com/TykTechnologies/tyk-install"
+      },
+      "repository": "https://github.com/TykTechnologies/tyk-install",
+      "category": "deployment",
+      "keywords": ["tyk", "api-gateway", "deployment", "docker-compose", "helm", "openshift"],
+      "strict": true
+    }
+  ]
+}

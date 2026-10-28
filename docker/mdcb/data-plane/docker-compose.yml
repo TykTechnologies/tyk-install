@@ -1,0 +1,63 @@
+services:
+  # The data plane keeps its own local Redis. It must NOT share the control
+  # plane's Redis - surviving a control-plane outage is the whole point.
+  tyk-redis-dp:
+    restart: unless-stopped
+    image: redis:7.2.0
+    container_name: tyk-redis-dp
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis-data-dp:/data
+    networks:
+      - tyk-dp
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  tyk-gateway:
+    restart: unless-stopped
+    image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.16.0}
+    container_name: tyk-gateway-dp
+    # Defaults to 8081 so a data plane can run alongside a control plane on one
+    # host without colliding on 8080.
+    ports:
+      - "${GATEWAY_PORT:-8081}:8080"
+    env_file:
+      - ./confs/tyk.env
+    volumes:
+      - tyk-gateway-certs-dp:/opt/tyk-gateway/certs
+    networks:
+      - tyk-dp
+    extra_hosts:
+      # Lets TYK_GW_SLAVEOPTIONS_CONNECTIONSTRING=host.docker.internal:9091 reach
+      # a control plane on the same machine. Remove for a real remote MDCB.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      tyk-redis-dp:
+        condition: service_healthy
+
+  tyk-pump:
+    restart: unless-stopped
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.18.0}
+    container_name: tyk-pump-dp
+    env_file:
+      - ./confs/pump.env
+    networks:
+      - tyk-dp
+    depends_on:
+      tyk-redis-dp:
+        condition: service_healthy
+
+networks:
+  tyk-dp:
+    driver: bridge
+    name: tyk-dp
+
+volumes:
+  redis-data-dp:
+    name: tyk-dp-redis-data
+  tyk-gateway-certs-dp:
+    name: tyk-dp-gateway-certs

@@ -1,0 +1,82 @@
+services:
+  tyk-redis:
+    restart: unless-stopped
+    image: redis:7.2.0
+    container_name: tyk-redis-oss
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data-oss:/data
+    networks:
+      - tyk-oss
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # A local upstream so the bundled example API works offline and does not depend
+  # on a public endpoint being reachable. Replace it with your own service.
+  httpbin:
+    restart: unless-stopped
+    image: mccutchen/go-httpbin:${HTTPBIN_VERSION:-v2.15.0}
+    container_name: tyk-httpbin-oss
+    networks:
+      - tyk-oss
+
+  tyk-gateway:
+    restart: unless-stopped
+    image: tykio/tyk-gateway:${GATEWAY_VERSION:-v5.16.0}
+    container_name: tyk-gateway-oss
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    env_file:
+      - ./confs/tyk.env
+    volumes:
+      # API definitions and policies are read from disk in OSS; there is no
+      # Dashboard to load them from. Read-only so the gateway cannot rewrite them.
+      - ./apps:/opt/tyk-gateway/apps:ro
+      - ./policies:/opt/tyk-gateway/policies:ro
+      - ./middleware:/opt/tyk-gateway/middleware:ro
+      - tyk-gateway-certs-oss:/opt/tyk-gateway/certs
+      # - ../utils/GeoLite2-Country.mmdb:/opt/tyk-gateway/databases/GeoLite2-Country.mmdb
+    networks:
+      - tyk-oss
+    depends_on:
+      tyk-redis:
+        condition: service_healthy
+      httpbin:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/hello" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Optional. OSS has no Dashboard to render analytics, so Pump only earns its
+  # keep once it is pointed at a sink you actually read. Enable with:
+  #   docker compose --profile analytics up -d
+  # and set TYK_GW_ENABLEANALYTICS=true in confs/tyk.env.
+  tyk-pump:
+    restart: unless-stopped
+    image: tykio/tyk-pump-docker-pub:${PUMP_VERSION:-v1.18.0}
+    container_name: tyk-pump-oss
+    profiles: [ analytics ]
+    env_file:
+      - ./confs/pump.env
+    networks:
+      - tyk-oss
+    depends_on:
+      tyk-redis:
+        condition: service_healthy
+
+networks:
+  tyk-oss:
+    driver: bridge
+    name: tyk-oss
+
+volumes:
+  redis-data-oss:
+    name: tyk-oss-redis-data
+  tyk-gateway-certs-oss:
+    name: tyk-oss-gateway-certs

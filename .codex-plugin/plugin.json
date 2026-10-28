@@ -1,0 +1,36 @@
+{
+  "name": "tyk-install",
+  "version": "1.0.0",
+  "description": "Deploy, verify, and production-harden Tyk with an AI coding agent.",
+  "author": {
+    "name": "Tyk Technologies",
+    "url": "https://github.com/TykTechnologies/tyk-install"
+  },
+  "repository": "https://github.com/TykTechnologies/tyk-install",
+  "keywords": [
+    "tyk",
+    "api-gateway",
+    "deployment",
+    "docker-compose",
+    "kubernetes",
+    "helm",
+    "openshift",
+    "bare-metal",
+    "mdcb"
+  ],
+  "interface": {
+    "displayName": "Tyk Install",
+    "developerName": "Tyk Technologies",
+    "shortDescription": "Deploy, verify, and production-harden Tyk with an AI coding agent.",
+    "longDescription": "Plan a Tyk deployment topology across Docker, Kubernetes/Helm, OpenShift and bare metal for the open source Gateway (no licence), Self-Managed, hybrid, MDCB and AI Studio; run it from this repository's tested configurations; prove it works with a request through the gateway; and audit any Tyk config against the production, performance, security and OpenShift guidance the files carry as marker comments.",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Deploy the open source Tyk Gateway locally with Docker and prove a request reaches an upstream.",
+      "Plan a Tyk Self-Managed install on my Kubernetes cluster and tell me what licences I need.",
+      "Is this values.yaml production ready?"
+    ],
+    "websiteURL": "https://tyk.io/docs/"
+  },
+  "skills": "./skills/"
+}
