@@ -1,1 +1,20 @@
-{}
+{
+  "httpbin-10rpm": {
+    "name": "httpbin keyed, 10 requests per minute",
+    "org_id": "default",
+    "active": true,
+    "rate": 10,
+    "per": 60,
+    "quota_max": -1,
+    "quota_renewal_rate": 3600,
+    "access_rights": {
+      "httpbin-keyed": {
+        "api_id": "httpbin-keyed",
+        "api_name": "httpbin keyed",
+        "versions": [
+          "Default"
+        ]
+      }
+    }
+  }
+}

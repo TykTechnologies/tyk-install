@@ -1,0 +1,84 @@
+name: Test OSS
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docker/oss/**'
+      - '.github/workflows/test-oss.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: OSS Gateway, keyed API and rate limit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: docker/oss
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start the stack
+        run: |
+          cp .env.example .env
+          docker compose up -d
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/hello > /dev/null && break
+            echo "Attempt $i/30 - Gateway not ready yet, waiting 2s..."
+            sleep 2
+          done
+          curl -sf http://localhost:8080/hello
+
+      - name: Keyless example API proxies to the upstream
+        run: |
+          curl -sf http://localhost:8080/httpbin/get > /dev/null
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/nope/)
+          [ "$code" = "404" ]
+
+      - name: Keyed API, policy key, ten 200s then two 429s
+        run: bash scripts/keyed-poc.sh
+
+      - name: Import a Tyk OAS document as the apps/ file pair
+        run: |
+          cat > "$RUNNER_TEMP/orders.oas.json" <<'JSON'
+          {
+            "openapi": "3.0.3",
+            "info": {"title": "Orders", "version": "1.0.0"},
+            "servers": [{"url": "http://localhost:8080/orders/"}],
+            "paths": {},
+            "components": {"securitySchemes": {"apiKey": {"type": "apiKey", "in": "header", "name": "Authorization"}}},
+            "security": [{"apiKey": []}],
+            "x-tyk-api-gateway": {
+              "info": {"id": "orders", "orgId": "default", "name": "Orders", "state": {"active": true}},
+              "upstream": {"url": "http://httpbin:8080"},
+              "server": {
+                "listenPath": {"value": "/orders/", "strip": true},
+                "authentication": {"enabled": true, "securitySchemes": {"apiKey": {"enabled": true}}}
+              }
+            }
+          }
+          JSON
+          bash scripts/add-oas-api.sh "$RUNNER_TEMP/orders.oas.json"
+          test -f apps/orders.json && test -f apps/orders-oas.json
+          docker compose restart tyk-gateway
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/hello > /dev/null && break
+            sleep 2
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/orders/get)
+          echo "orders without a key: $code"
+          [ "$code" = "401" ]
+
+      - name: No container exited
+        run: |
+          docker compose ps
+          if docker compose ps --format json | grep -q '"State":"exited"'; then
+            docker compose logs
+            exit 1
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v --remove-orphans || true

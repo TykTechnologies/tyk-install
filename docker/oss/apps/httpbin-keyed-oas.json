@@ -1,0 +1,60 @@
+{
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "in": "header",
+        "name": "Authorization",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "title": "httpbin keyed",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {},
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080/httpbin-keyed"
+    },
+    {
+      "url": "/httpbin-keyed"
+    },
+    {
+      "url": "http://localhost:8080/httpbin-keyed/"
+    }
+  ],
+  "x-tyk-api-gateway": {
+    "info": {
+      "id": "httpbin-keyed",
+      "orgId": "default",
+      "name": "httpbin keyed",
+      "state": {
+        "active": true
+      }
+    },
+    "upstream": {
+      "url": "http://httpbin:8080"
+    },
+    "server": {
+      "listenPath": {
+        "value": "/httpbin-keyed/",
+        "strip": true
+      },
+      "authentication": {
+        "enabled": true,
+        "securitySchemes": {
+          "apiKey": {
+            "enabled": true
+          }
+        }
+      }
+    }
+  }
+}
