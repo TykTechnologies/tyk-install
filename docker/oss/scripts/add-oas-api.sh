@@ -18,7 +18,10 @@ SECRET="$(grep -E '^TYK_GW_SECRET=' confs/tyk.env | cut -d= -f2 | cut -d' ' -f1)
 NAME="tyk-oas-import-$$"
 
 docker compose up -d tyk-redis >/dev/null
+# The image runs as uid 65532. Run as the host user so the Gateway can write into apps/ on
+# Linux, where a bind mount keeps the host directory's ownership, and so the pair is yours.
 docker run -d --rm --name "${NAME}" --network tyk-oss -p 127.0.0.1::8080 \
+  --user "$(id -u):$(id -g)" \
   -v "$(pwd)/apps:/opt/tyk-gateway/apps" \
   -e TYK_GW_SECRET="${SECRET}" -e TYK_GW_STORAGE_TYPE=redis -e TYK_GW_STORAGE_ADDRS=tyk-redis:6379 \
   -e TYK_GW_USEDBAPPCONFIGS=false -e TYK_GW_APPPATH=/opt/tyk-gateway/apps \
