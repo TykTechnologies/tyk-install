@@ -6,7 +6,7 @@ Tyk deployment configurations for Docker, Kubernetes, and bare metal. All config
 
 **Open source vs paid** - Tyk Gateway and Tyk Pump are open source (MPL 2.0) and need no license. Tyk Dashboard, Tyk Developer Portal, Tyk Operator and Tyk Multi Data Center Bridge (MDCB) need a license key: request one with a [Tyk Self-Managed trial](https://tyk.io/self-managed-trial/) (the key arrives by email). For a hosted control plane, [create a Tyk Cloud account](https://tyk.io/docs/getting-started/create-account). The canonical comparison is [Tyk deployment options and licensing](https://tyk.io/docs/apim).
 
-To run only the open source Gateway, use [`docker/oss/`](./docker/oss/) or [`kubernetes/helm-oss/`](./kubernetes/helm-oss/) here, or the two-minute [Tyk Open Source Gateway quick start](https://tyk.io/docs/deployment-and-operations/tyk-open-source-api-gateway/quick-start).
+To run only the open source Gateway, use [`docker/oss/`](./docker/oss/) or [`kubernetes/helm-oss/`](./kubernetes/helm-oss/) here, or the two-minute [Tyk Open Source Gateway quick start](https://tyk.io/docs/deployment-and-operations/tyk-open-source-api-gateway/quick-start). The Docker OSS stack ships a keyed example API in the current Tyk OAS format and a [five-minute proof of concept](./docker/oss/#five-minute-proof-of-concept-one-keyed-api-10-requests-per-minute): one API key, 10 requests per minute, the 429 that proves it.
 
 Required licenses depend on deployment type:
 
@@ -37,7 +37,7 @@ Or choose a deployment:
 
 | Deployment       | Description                                                     | Guide                            |
 | ---------------- | --------------------------------------------------------------- | -------------------------------- |
-| **OSS**          | Open source Gateway and Redis. No license, no Dashboard         | [README](./docker/oss/)          |
+| **OSS**          | Open source Gateway and Redis. No license, no Dashboard. Keyless and keyed (Tyk OAS) examples, a 10 requests/minute key in five minutes | [README](./docker/oss/)          |
 | **Getting Started** | Self-Managed stack with sample APIs, policies and Portal content (`start.sh`) | [Quick start](https://tyk.io/docs/getting-started/quick-start) |
 | **Self-Managed** | Full stack: Dashboard, Gateway, Portal, Pump, Redis, PostgreSQL | [README](./docker/self-managed/) |
 | **Hybrid**       | Data plane connecting to Tyk Cloud/MDCB: Gateway, Pump, Redis   | [README](./docker/hybrid/)       |
