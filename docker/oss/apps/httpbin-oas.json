@@ -1,0 +1,38 @@
+{
+  "info": {
+    "title": "httpbin",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {},
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080/httpbin"
+    },
+    {
+      "url": "/httpbin"
+    },
+    {
+      "url": "http://localhost:8080/httpbin/"
+    }
+  ],
+  "x-tyk-api-gateway": {
+    "info": {
+      "id": "httpbin",
+      "orgId": "default",
+      "name": "httpbin",
+      "state": {
+        "active": true
+      }
+    },
+    "upstream": {
+      "url": "http://httpbin:8080"
+    },
+    "server": {
+      "listenPath": {
+        "value": "/httpbin/",
+        "strip": true
+      }
+    }
+  }
+}

@@ -9,7 +9,7 @@ Tyk Operator is a native Kubernetes operator, allowing you to define and manage 
 The Tyk Operator extends Kubernetes with custom resources for managing Tyk APIs:
 
 - **TykOasApiDefinition** – Defines configuration of OpenAPI based API definition managed by Tyk.
-- **ApiDefinition** – Defines configuration of Classic (non-OAS) Tyk API definition.
+- **ApiDefinition** – Defines configuration of a Tyk API definition in the older, non-OAS format. New APIs use TykOasApiDefinition.
 - **TykStreamsApiDefinition** – Defines configuration of Tyk Streams APIs.
 - **SecurityPolicy** – Defines configuration of security policies and access control for APIs.
 - **SubGraph** – Defines GraphQL federation subgraph .

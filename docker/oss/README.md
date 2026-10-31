@@ -11,7 +11,7 @@ version control rather than through a UI — which many teams prefer.
 | --- | --- | --- |
 | Gateway image | `tykio/tyk-gateway` | `tykio/tyk-gateway-ee` |
 | Licence | none | Dashboard (+ Portal) |
-| API definitions | files in `apps/` (Tyk OAS pair or classic) | Dashboard, stored in PostgreSQL |
+| API definitions | Tyk OAS files in `apps/` | Dashboard, stored in PostgreSQL |
 | Policies | `policies/policies.json` | Dashboard |
 | `TYK_GW_USEDBAPPCONFIGS` | `false` | `true` |
 | Dependencies | Redis | Redis + PostgreSQL |
@@ -62,11 +62,11 @@ rather than `/hello` alone.
 
 ## Five-minute proof of concept: one keyed API, 10 requests per minute
 
-The stack ships two example APIs. `apps/httpbin.json` is keyless and in the classic format.
-`httpbin-keyed` needs an API key and is written in the current Tyk OAS format
-(`apps/httpbin-keyed-oas.json` with its generated wrapper `apps/httpbin-keyed.json`, see
-[Adding an API](#adding-an-api)). The policy `httpbin-10rpm` in `policies/policies.json` caps a
-key at 10 requests per minute. With the stack up, run the whole proof in one go:
+The stack ships two Tyk OAS example APIs. `httpbin` is keyless and `httpbin-keyed` needs an API
+key. Each is a pair of files in `apps/`: the OpenAPI document (`httpbin-keyed-oas.json`) and the
+wrapper the Gateway generated from it (`httpbin-keyed.json`), see [Adding an API](#adding-an-api).
+The policy `httpbin-10rpm` in `policies/policies.json` caps a key at 10 requests per minute. With
+the stack up, run the whole proof in one go:
 
 ```bash
 scripts/keyed-poc.sh
@@ -117,13 +117,11 @@ The Gateway reads API definitions from `apps/` at start. The mount is read-only,
 never rewrites your files; keep them in git, which makes the gateway reproducible without a
 database restore.
 
-### Tyk OAS format (current)
-
 A file-based Tyk OAS API is a pair of files: `<id>-oas.json`, your OpenAPI document with the
-`x-tyk-api-gateway` extension, and `<id>.json`, a classic-format wrapper with `"is_oas": true`
-that the Gateway generates and reads the routing from. A bare OpenAPI document dropped into
-`apps/` is not loaded, and a hand-written stub wrapper fails with `Listen path is empty`. Let the
-Gateway API produce the pair:
+`x-tyk-api-gateway` extension, and `<id>.json`, the wrapper the Gateway generates from it
+(`"is_oas": true`) and reads the routing from. A bare OpenAPI document dropped into `apps/` is
+not loaded, and a hand-written stub wrapper fails with `Listen path is empty`. Let the Gateway API
+produce the pair:
 
 ```bash
 scripts/add-oas-api.sh my-api.oas.json     # writes apps/<id>.json and apps/<id>-oas.json
@@ -133,8 +131,9 @@ docker compose logs tyk-gateway | grep 'API Loaded'
 
 The script starts a throwaway Gateway with `apps/` mounted writable, posts the document to
 `POST /tyk/apis/oas`, waits for the pair and stops it; the running Gateway keeps its read-only
-mount. `apps/httpbin-keyed-oas.json` and `apps/httpbin-keyed.json` were produced this way and
-are the example to copy. The fields that matter in the document:
+mount. Both example pairs were produced this way: copy `apps/httpbin-oas.json` for a keyless API
+and `apps/httpbin-keyed-oas.json` for one behind an API key. The fields that matter in the
+document:
 
 | Field | Meaning |
 | --- | --- |
@@ -144,20 +143,6 @@ are the example to copy. The fields that matter in the document:
 | `x-tyk-api-gateway.upstream.url` | the upstream. In Compose, the service name — not `localhost` |
 | `x-tyk-api-gateway.server.authentication` | `enabled: true` plus the security scheme to enforce; omit it for a keyless API |
 | `x-tyk-api-gateway.info.state.active` | `false` means the definition loads but serves nothing |
-
-### Classic format
-
-Drop a classic Tyk API definition into `apps/` and restart the Gateway. `apps/httpbin.json` is a
-working keyless example to copy. The fields that matter:
-
-| Field | Meaning |
-| --- | --- |
-| `api_id` | unique, referenced by keys and policies |
-| `proxy.listen_path` | the path Tyk serves, e.g. `/httpbin/` |
-| `proxy.target_url` | the upstream. In Compose, the service name — not `localhost` |
-| `proxy.strip_listen_path` | remove the listen path before forwarding |
-| `use_keyless` | `true` for no authentication. Without it, requests get 401 |
-| `active` | `false` means the definition loads but serves nothing |
 
 ## Configuration
 

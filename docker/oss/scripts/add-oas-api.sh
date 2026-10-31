@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Turn one Tyk OAS document into the file pair the open source Gateway loads from apps/:
-# <id>.json (generated classic wrapper, is_oas: true) and <id>-oas.json (your document).
+# <id>.json (the wrapper the Gateway generates, is_oas: true) and <id>-oas.json (your document).
 # A bare OpenAPI file dropped into apps/ is not loaded, and the wrapper is not meant to be
 # written by hand, so this runs a throwaway Gateway with apps/ mounted writable, posts the
 # document to its Gateway API, and stops it. Then restart the real Gateway.
