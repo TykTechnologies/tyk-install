@@ -223,34 +223,8 @@ kind (rate limits, cache, MCP, failures) or a component that is not running.
 
 ## Known Limitations
 
-- The Dashboard shows each gateway's version and loaded APIs only for Gateway 5.16+; older gateways
-  show as `unknown`.
 - `tyk_gw_group_id` (gateway groups in Fleet Health and the MDCB dashboard) exists only on gateways
   connected to MDCB.
 - On PostgreSQL, the Dashboard reports its pool size limit only when
   `TYK_DB_STORAGE_MAIN_POSTGRES_MAXOPENCONNECTIONS` is set, so the datastore pool saturation panel and
   alert stay empty otherwise.
-- Rate limit, quota, cache and MCP panels stay empty until there is traffic of that kind.
-- A restarted component gets a new instance id; the collector drops the old one's series after
-  `metric_expiration` (2 minutes), and the trace-derived span metrics after up to about 4 minutes.
-- Prometheus misses the first increment of a counter that starts mid-run.
-- The Developer Portal exports provider sync and dependency health only.
-- Loki stops accepting logs when its disk is more than 90% full.
-
-## Origin
-
-The dashboards and control plane rules started from tyk-demo's `opentelemetry-demo` deployment
-([TykTechnologies/tyk-demo#418](https://github.com/TykTechnologies/tyk-demo/pull/418)). tyk-install
-now maintains them. Changes from that version:
-
-- The SLO dashboard reads the Gateway's OpenTelemetry metrics instead of Tyk Pump's Prometheus export.
-- API Portfolio: "Top 10 APIs by P95 Latency" no longer multiplies the latency by the request count,
-  and "Top 10 APIs by Request Rate" filters on the right method label.
-- API Troubleshooting: the gateway logs link points at the Loki datasource; Fleet Health and API
-  Troubleshooting take the service name from a variable, and their log panels match Tyk's `warning`
-  level (they only matched `warn`, so warnings were missing).
-- The Gateway alerts are Prometheus rules with unit tests. The error rate is per API (it compared a
-  series with itself before), the latency alert reads the Gateway only, and the error, latency and
-  upstream alerts ignore near-idle APIs. The upstream alert fires on a share of traffic rather than
-  on a single error, and the lost-APIs alert keeps firing while the APIs are missing.
-- Datasource UIDs, links and folder names no longer depend on the demo environment.
