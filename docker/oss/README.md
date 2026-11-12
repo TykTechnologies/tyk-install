@@ -101,9 +101,16 @@ What the pieces are:
 - The key, the policy and the API must share the same `org_id` (`default` in this stack). A
   file policy without `org_id`, or a key request without one, fails with "Failed to create key"
   and the Gateway logs `policy not found`.
-- Counters live in Redis, so the limit holds across every Gateway replica and the key survives a
-  Gateway restart. A rate-limited call returns HTTP 429 `{"error": "Rate Limit Exceeded"}`; an
-  exhausted quota returns HTTP 403 `{"error": "Quota exceeded"}`.
+- The key lives in Redis, so it survives a Gateway restart. Quotas are counted in Redis too.
+  Where the rate-limit counter lives depends on how many Gateways run. With one Gateway, as in
+  this stack, it is held in the Gateway's memory and starts again after a restart. With two or
+  more Gateways on the same Redis, a limit this low is counted in Redis, so the ten requests are
+  shared across all of them. Limits above `drl_threshold` requests per second per Gateway (5 by
+  default) are divided between the Gateways instead. For one exact shared counter at any rate,
+  set `TYK_GW_ENABLEREDISROLLINGLIMITER=true`. See
+  [Rate limiting](https://tyk.io/docs/api-management/rate-limit).
+- A rate-limited call returns HTTP 429 `{"error": "Rate Limit Exceeded"}`; an exhausted quota
+  returns HTTP 403 `{"error": "Quota exceeded"}`.
 - A cap on one endpoint for every caller belongs in the Tyk OAS document instead, under
   `x-tyk-api-gateway.middleware.operations.<operationId>.rateLimit`, with `per` as a duration
   string: `{"enabled": true, "rate": 5, "per": "1m"}`. That limit answers HTTP 429
