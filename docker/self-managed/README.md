@@ -154,12 +154,12 @@ curl http://localhost:8080/httpbin/get -H "Authorization: <your-api-key>"
 - **TYK_LICENSE_KEY** - Dashboard license (required)
 - **TYK_PORTAL_LICENSE** - Portal license (required for Portal)
 
-**Service secrets in config files:**
+**Service secrets in config files (MUST BE SET):**
 
 - **TYK_GW_SECRET** - Gateway API secret (must match Dashboard)
 - **TYK_GW_NODESECRET** - Node secret for Gateway-Dashboard sync
 - **TYK_DB_ADMINSECRET** - Dashboard admin API authentication
-
+- **PORTAL_API_SECRET** - Portal API secret
 ---
 
 ## Phase 4: Bootstrap Process (Manual)
