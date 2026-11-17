@@ -166,12 +166,12 @@ helm repo add tyk-helm https://helm.tyk.io/public/helm/charts/
 helm repo update
 
 # Install Tyk Data Plane (~30 sec)
-helm install tyk-dp tyk-helm/tyk-data-plane \
+helm install tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
   --namespace tyk-dp \
   --values values.yaml
 
 # On RedHat OpenShift, layer the OpenShift overlay instead (tyk-charts 5.4.0+):
-# helm install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+# helm install tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
 #   --namespace tyk-dp \
 #   --values values.yaml \
 #   --values values-openshift.yaml
@@ -240,7 +240,7 @@ service:
 **Apply changes:**
 
 ```bash
-helm upgrade tyk-dp tyk-helm/tyk-data-plane \
+helm upgrade tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
   --namespace tyk-dp \
   --values values.yaml
 ```
@@ -284,7 +284,7 @@ Configure Ingress for production deployments with custom domains, TLS, and share
 3. Apply changes:
 
    ```bash
-   helm upgrade tyk-dp tyk-helm/tyk-data-plane \
+   helm upgrade tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
      --namespace tyk-dp \
      --values values.yaml
 
@@ -528,9 +528,10 @@ kubectl create secret generic tyk-operator-conf \
 # Verify secret created
 kubectl get secret tyk-operator-conf -n tyk-dp
 
-# Install Tyk Operator
-helm install tyk-operator tyk-helm/tyk-operator \
-  --namespace tyk-dp
+# Install Tyk Operator (the standalone values harden the controller's container)
+helm install tyk-operator tyk-helm/tyk-operator --version 1.6.0 \
+  --namespace tyk-dp \
+  --values ../standalone-operator/values.yaml
 
 # Verify operator is running (~30 sec)
 kubectl get pods -n tyk-dp -l control-plane=tyk-operator-controller-manager
@@ -561,7 +562,7 @@ Run the Quick Start steps with these changes:
 | --- | --- |
 | 1 | `oc login` instead of the cloud CLI. |
 | 4 | Redis needs no extra flags. |
-| 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml`. |
+| 5 | Install with the pinned `--version 5.5.0` (OpenShift needs 5.4.0 or later) and layer `--values values-openshift.yaml`. |
 | 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | 8 | The operator and cert-manager need cluster-admin. |
 | Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
@@ -569,7 +570,7 @@ Run the Quick Start steps with these changes:
 ### Install
 
 ```bash
-helm install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+helm install tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
   --namespace tyk-dp \
   --values values.yaml \
   --values values-openshift.yaml \
@@ -599,7 +600,7 @@ Tempo and Loki. After installing the observability stack (with `TYK_NAMESPACE=ty
 overlay and the post-renderer to the install:
 
 ```bash
-helm upgrade --install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+helm upgrade --install tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
   --namespace tyk-dp \
   --values values.yaml \
   --values values-otel.yaml \

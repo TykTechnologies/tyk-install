@@ -6,7 +6,7 @@
 # `--set global.components.operator=false`, then a cluster admin installs the
 # operator into the same namespace:
 #
-#   helm install tyk-operator tyk-helm/tyk-operator --version 1.5.0 \
+#   helm install tyk-operator tyk-helm/tyk-operator --version 1.6.0 \
 #     --namespace tyk -f values-operator-namespaced.yaml
 #
 # The chart still creates cluster-scoped CRDs and ClusterRoles, so this install
@@ -37,3 +37,22 @@ envVars:
       secretKeyRef:
         name: tyk-conf
         key: OperatorLicense
+
+# Chart 1.6.0 sets no container securityContext by default; earlier charts set
+# all of these but the seccomp profile. restricted-v2 accepts every field.
+securityContext: # PROD: Keep. Without it the controller can escalate privileges and write to its root filesystem.
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Kubernetes Gateway API: values-gateway-api.yaml has no effect on this release,
+# so turn it on here. WATCH_NAMESPACE above limits the operator to this
+# namespace, so the OperatorContexts, Gateway and HTTPRoutes must all live here
+# too, and namespace owners need gateway.networking.k8s.io rights to publish
+# routes. Install the Gateway API CRDs first, then set:
+# enableGatewayAPI: true

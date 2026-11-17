@@ -1,0 +1,30 @@
+# ============================================================================
+# TYK SELF-MANAGED - KUBERNETES GATEWAY API OVERLAY (tyk-charts 5.5.0+)
+# ============================================================================
+# Turns on Kubernetes Gateway API support (GatewayClass, Gateway, HTTPRoute) in
+# the bundled Tyk Operator, which needs Operator 1.6.0 or later. Install the
+# Gateway API CRDs first: with the flag on and the CRDs missing, the operator
+# exits at startup. A release first installed before tyk-charts 5.5.0 also needs
+# the operator's own CRDs updated, because `helm upgrade` never changes CRDs:
+#
+#   helm show crds tyk-helm/tyk-operator --version 1.6.0 | kubectl apply --server-side --force-conflicts -f -
+#   kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.2/experimental-install.yaml
+#   helm upgrade --install tyk tyk-helm/tyk-stack --version 5.5.0 -n tyk \
+#     --values values.yaml --values values-gateway-api.yaml
+#
+# Then apply gateway-api/class-and-gateway.yaml. See "Kubernetes Gateway API
+# (Optional)" in the README.
+#
+# Pass this file on every later `helm upgrade`. An upgrade without it turns the
+# flag off, and the operator stops reconciling routes. To turn the feature off
+# for good, first delete the HTTPRoutes, Gateways and GatewayClasses while the
+# flag is still on, so the operator removes the Tyk APIs and finalizers it
+# added; with the flag off, nothing removes them.
+#
+# values.yaml already sets the two Gateway options this needs:
+# enableCustomDomains (routes match on hostname) and enableStrictRoutes
+# (/orders does not also match /orders-archive).
+# ============================================================================
+
+tyk-operator:
+  enableGatewayAPI: true

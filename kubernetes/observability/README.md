@@ -98,14 +98,14 @@ helm plugin install .
 
 ```bash
 # Self-Managed
-helm upgrade --install tyk tyk-helm/tyk-stack --version 5.4.0 \
+helm upgrade --install tyk tyk-helm/tyk-stack --version 5.5.0 \
   --namespace tyk \
   --values ../helm-self-managed/values.yaml \
   --values ../helm-self-managed/values-otel.yaml \
   --post-renderer ./post-render.sh
 
 # Hybrid
-helm upgrade --install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+helm upgrade --install tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
   --namespace tyk-dp \
   --values ../helm-hybrid/values.yaml \
   --values ../helm-hybrid/values-otel.yaml \

@@ -22,6 +22,7 @@ jobs:
             docker/*/docker-compose*.yml \
             docker/observability/confs \
             kubernetes/*/values*.yaml \
+            kubernetes/*/gateway-api \
             observability/collector \
             observability/rules
 

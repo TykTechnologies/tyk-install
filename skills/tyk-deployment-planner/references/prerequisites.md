@@ -60,6 +60,11 @@ gateway port so it can run alongside a control plane on one host.
   README gives the Bitnami commands and pinned chart versions used for testing.
 - An ingress controller, or use `kubectl port-forward` while evaluating.
 - cert-manager, if the Tyk Operator is deployed.
+- Kubernetes 1.34 or 1.35 when the Operator is deployed: those are the versions the Operator
+  1.6.0 release notes list as compatible (tyk-charts 5.5.0 bundles it).
+- For the Operator's Kubernetes Gateway API support: the Gateway API CRDs from the experimental
+  channel of v1.6.2, applied with `kubectl apply --server-side` by a cluster admin, before the
+  feature is turned on. With the flag on and the CRDs missing, the operator exits at startup.
 
 ## OpenShift
 

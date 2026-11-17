@@ -31,7 +31,7 @@ The Tyk Operator extends Kubernetes with custom resources for managing Tyk APIs:
 
 - **Existing Tyk Dashboard** (running and accessible)
 - Dashboard API credentials (User API Key + Org ID)
-- Kubernetes 1.19+
+- Kubernetes 1.34 or 1.35, the versions Operator 1.6.0 lists as compatible
 - Helm 3 or Helm 4
 - kubectl configured
 
@@ -92,8 +92,10 @@ kubectl create secret generic tyk-operator-conf \
 kubectl get secret tyk-operator-conf -n tyk-operator
 
 # Install Tyk Operator
-helm install tyk-operator tyk-helm/tyk-operator \
-  --namespace tyk-operator
+# values.yaml hardens the controller's container, which chart 1.6.0 leaves unset
+helm install tyk-operator tyk-helm/tyk-operator --version 1.6.0 \
+  --namespace tyk-operator \
+  --values values.yaml
 
 # Verify operator is running (~30 sec)
 kubectl get pods -n tyk-operator -l control-plane=tyk-operator-controller-manager
@@ -105,6 +107,54 @@ kubectl get pods -n tyk-operator -l control-plane=tyk-operator-controller-manage
 
 **Test Operator (Optional):**
 Create a sample API using Tyk Operator CRD to verify it's working. The operator will create the API on your control plane Dashboard, which will then sync to your data plane gateways. Refer to [Tyk Operator documentation](https://tyk.io/docs/api-management/automations/operator) for examples.
+
+---
+
+## Kubernetes Gateway API
+
+From Operator 1.6.0 the operator can also take routes from the Kubernetes Gateway API
+(`GatewayClass`, `Gateway`, `HTTPRoute`) and create Tyk OAS APIs in the Dashboard for each route.
+It is off by default. It needs Tyk Gateways running in this cluster behind a Kubernetes Service,
+because a `Gateway` points at that Service, and those Gateways need
+`TYK_GW_ENABLECUSTOMDOMAINS=true` and `TYK_GW_HTTPSERVEROPTIONS_ENABLESTRICTROUTES=true`, so a
+route matches on its hostname and `/orders` does not also match `/orders-archive`. Every CRD step
+needs cluster-admin. The full walkthrough, with checks, is in the
+[self-managed README](../helm-self-managed/README.md#kubernetes-gateway-api-optional).
+
+1. If the operator was first installed with a chart earlier than 1.6.0, update its CRDs. Helm
+   installs CRDs on the first install only, so `helm upgrade` leaves the old ones in place:
+
+   ```bash
+   helm show crds tyk-helm/tyk-operator --version 1.6.0 | kubectl apply --server-side --force-conflicts -f -
+   ```
+
+2. Install the Gateway API CRDs from the experimental channel of v1.6.2, as the Tyk Operator
+   documentation specifies:
+
+   ```bash
+   kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.2/experimental-install.yaml
+   ```
+
+3. Turn the feature on, and keep the `--set` on every later upgrade. With the flag on and the
+   Gateway API CRDs missing, the operator exits at startup.
+
+   ```bash
+   helm upgrade tyk-operator tyk-helm/tyk-operator --version 1.6.0 \
+     --namespace tyk-operator \
+     --values values.yaml \
+     --set enableGatewayAPI=true
+   ```
+
+4. Create the OperatorContexts, `GatewayClass` and `Gateway` from a copy of
+   [`../helm-self-managed/gateway-api/class-and-gateway.yaml`](../helm-self-managed/gateway-api/class-and-gateway.yaml),
+   which assumes the self-managed stack in namespace `tyk`. Change:
+   - the `tyk-dashboard` OperatorContext's namespace and `secretRef` to `tyk-operator` and
+     `tyk-operator-conf`, and the GatewayClass `parametersRef.namespace` to match;
+   - the `tyk-data-plane` OperatorContext and the `Gateway` into the namespace of the Service in
+     front of your Gateways, with `serviceRef.name` set to that Service. The Gateway looks for its
+     `infrastructure.parametersRef` in its own namespace;
+   - the listener `port` to a port of that Service;
+   - in `example-route.yaml`, the route's `parentRefs[].namespace` to the Gateway's namespace.
 
 ---
 
@@ -215,8 +265,9 @@ kubectl get tykoasapidefinition httpbin -n tyk -o jsonpath='{.status}'
 # Check CRDs are installed
 kubectl get crd | grep tyk
 
-# Reinstall if missing
-helm upgrade tyk-operator tyk-helm/tyk-operator -n tyk-operator
+# Install or update them. Helm installs CRDs on the first install only, so a
+# helm upgrade never adds or changes them
+helm show crds tyk-helm/tyk-operator --version 1.6.0 | kubectl apply --server-side --force-conflicts -f -
 ```
 
 **API not appearing in Dashboard:**

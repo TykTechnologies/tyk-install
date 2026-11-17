@@ -1,0 +1,74 @@
+# ============================================================================
+# KUBERNETES GATEWAY API - CLASS AND GATEWAY FOR THE SELF-MANAGED STACK
+# ============================================================================
+# Connects the Gateway API to the stack installed in namespace `tyk` as release
+# `tyk`. Apply after installing with values-gateway-api.yaml:
+#
+#   kubectl apply -f gateway-api/class-and-gateway.yaml
+#
+# Platform teams own these four resources; application teams add HTTPRoutes.
+# ============================================================================
+---
+# The Tyk Dashboard the GatewayClass creates APIs in. The bootstrap job writes
+# tyk-operator-conf (TYK_URL, TYK_AUTH, TYK_ORG, TYK_MODE).
+apiVersion: tyk.tyk.io/v1alpha1
+kind: OperatorContext
+metadata:
+  name: tyk-dashboard
+  namespace: tyk
+spec:
+  secretRef:
+    name: tyk-operator-conf
+    namespace: tyk
+---
+# The Tyk Gateways that serve the routes, found through the Service in front of
+# them. The Service must be in this OperatorContext's namespace.
+apiVersion: tyk.tyk.io/v1alpha1
+kind: OperatorContext
+metadata:
+  name: tyk-data-plane
+  namespace: tyk
+spec:
+  dataPlane:
+    serviceRef:
+      name: gateway-svc-tyk-tyk-gateway # gateway-svc-<release>-tyk-gateway
+    # Sharding: the operator tags every API it creates for the Gateway with
+    # these. Set them only when the Gateways are segmented on the same tags
+    # (see the README); a segmented Gateway loads no untagged API.
+    # tags:
+    #   - gateway-api
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: tyk
+spec:
+  controllerName: tyk.io/gateway-controller
+  parametersRef:
+    group: tyk.tyk.io
+    kind: OperatorContext
+    name: tyk-dashboard
+    namespace: tyk
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tyk
+  namespace: tyk
+spec:
+  gatewayClassName: tyk
+  # Required: binds the Gateway to the gateway Service, which gives it its
+  # address and listener ports. Without it the Gateway is never Programmed,
+  # and with dataPlane.tags it also keeps the APIs off other Tyk Gateways.
+  infrastructure:
+    parametersRef:
+      group: tyk.tyk.io
+      kind: OperatorContext
+      name: tyk-data-plane
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080 # A port of the gateway Service: global.servicePorts.gateway in values.yaml
+      allowedRoutes:
+        namespaces:
+          from: All # PROD: Use `from: Selector` to limit which namespaces can publish routes on this Gateway.

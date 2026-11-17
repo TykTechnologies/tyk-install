@@ -41,7 +41,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n tyk --
 Then the Gateway:
 
 ```bash
-helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.4.0 -f values.yaml
+helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.5.0 -f values.yaml
 ```
 
 Pin `--version`. Without it `helm repo update` can move the chart under you, and the chart
@@ -104,7 +104,7 @@ Install with the base file first, then any overlay, so a repository update never
 your choices:
 
 ```bash
-helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk -f values.yaml -f openshift-values.yaml
+helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.5.0 -f values.yaml -f openshift-values.yaml
 ```
 
 ### OpenShift
@@ -115,7 +115,7 @@ The containers must not run as a fixed UID:
 python3 ../../skills/tyk-production-readiness/scripts/profiles.py \
   apply values.yaml --profile openshift -o openshift-values.yaml
 
-helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk -f values.yaml -f openshift-values.yaml
+helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.5.0 -f values.yaml -f openshift-values.yaml
 ```
 
 Bitnami Redis needs SCC-compatible settings too:
