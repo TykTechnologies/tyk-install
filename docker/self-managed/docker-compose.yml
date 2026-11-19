@@ -87,7 +87,7 @@ services:
 
   tyk-portal:
     restart: unless-stopped
-    image: tykio/portal:${PORTAL_VERSION:-v1.20.0}
+    image: tykio/portal:${PORTAL_VERSION:-v1.20.1}
     container_name: tyk-portal
     ports:
       - "${PORTAL_PORT:-3001}:3001"
