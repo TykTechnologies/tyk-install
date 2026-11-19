@@ -63,7 +63,7 @@ kubectl config current-context          # confirm the target BEFORE installing
 # Redis and PostgreSQL are not part of the Tyk charts. The exact Bitnami
 # commands and pinned chart versions are in each kubernetes/*/README.md.
 
-helm upgrade --install tyk tyk-helm/<chart> -n tyk \
+helm upgrade --install tyk tyk-helm/<chart> --version <pinned chart version> -n tyk \
   -f kubernetes/<target>/values.yaml \
   -f <overlay>.yaml
 ```
@@ -86,7 +86,7 @@ As Helm, plus the SCC overlay and Routes instead of Ingress. Self-Managed and hy
 overlay; pass it on the install and on every later upgrade:
 
 ```bash
-helm upgrade --install tyk tyk-helm/tyk-stack -n tyk --version 5.4.0 \
+helm upgrade --install tyk tyk-helm/tyk-stack -n tyk --version 5.5.0 \
   -f kubernetes/helm-self-managed/values.yaml \
   -f kubernetes/helm-self-managed/values-openshift.yaml
 
@@ -113,7 +113,7 @@ collector, Prometheus, Tempo, Loki and Grafana. It is an overlay, so the base st
 docker compose -f docker-compose.yml -f ../observability/docker-compose.otel.yml up -d
 
 # Helm: add the values-otel.yaml overlay to the install command
-helm upgrade --install tyk tyk-helm/tyk-stack -n tyk --version 5.4.0 \
+helm upgrade --install tyk tyk-helm/tyk-stack -n tyk --version 5.5.0 \
   -f kubernetes/helm-self-managed/values.yaml -f kubernetes/helm-self-managed/values-otel.yaml
 ```
 

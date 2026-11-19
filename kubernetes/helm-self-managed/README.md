@@ -2,7 +2,8 @@
 
 ## Prerequisites
 
-- Kubernetes cluster (EKS/GKE/AKS) running
+- Kubernetes cluster (EKS/GKE/AKS) running. The bundled Tyk Operator 1.6.0 lists Kubernetes 1.34
+  and 1.35 as compatible
 - kubectl configured and connected
 - Helm 3.12+ or Helm 4 installed
 - Tyk license key
@@ -154,12 +155,12 @@ helm repo add tyk-helm https://helm.tyk.io/public/helm/charts/
 helm repo update
 
 # Install Tyk (~60 sec)
-helm install tyk tyk-helm/tyk-stack \
+helm install tyk tyk-helm/tyk-stack --version 5.5.0 \
   --namespace tyk \
   --values values.yaml
 
 # On RedHat OpenShift, layer the OpenShift overlay instead (tyk-charts 5.4.0+):
-# helm install tyk tyk-helm/tyk-stack --version 5.4.0 \
+# helm install tyk tyk-helm/tyk-stack --version 5.5.0 \
 #   --namespace tyk \
 #   --values values.yaml \
 #   --values values-openshift.yaml
@@ -249,7 +250,7 @@ service:
 **Apply changes:**
 
 ```bash
-helm upgrade tyk tyk-helm/tyk-stack \
+helm upgrade tyk tyk-helm/tyk-stack --version 5.5.0 \
   --namespace tyk \
   --values values.yaml
 ```
@@ -297,7 +298,7 @@ Configure Ingress for production deployments with custom domains, TLS, and share
 3. Apply changes:
 
    ```bash
-   helm upgrade tyk tyk-helm/tyk-stack \
+   helm upgrade tyk tyk-helm/tyk-stack --version 5.5.0 \
      --namespace tyk \
      --values values.yaml
 
@@ -653,14 +654,14 @@ Run the Quick Start steps with these changes:
 | --- | --- |
 | 1 | `oc login` instead of the cloud CLI. |
 | 4 | PostgreSQL needs the commented OpenShift flags. Redis needs none. cert-manager is only for the operator and needs cluster-admin; without cluster-admin, skip it. |
-| 5 | Install with `--version 5.4.0` (or later) and layer `--values values-openshift.yaml` (see [Install](#install)). The operator installs cluster-scoped CRDs, so it needs cluster-admin; without it, `helm install` fails with `cannot patch resource "customresourcedefinitions"`. Add `--set global.components.operator=false`, and a cluster admin can add the operator for your namespace later; see [Operator without cluster-admin](#operator-without-cluster-admin). |
+| 5 | Install with the pinned `--version 5.5.0` (OpenShift needs 5.4.0 or later) and layer `--values values-openshift.yaml` (see [Install](#install)). The operator installs cluster-scoped CRDs, so it needs cluster-admin; without it, `helm install` fails with `cannot patch resource "customresourcedefinitions"`. Add `--set global.components.operator=false`, and a cluster admin can add the operator for your namespace later; see [Operator without cluster-admin](#operator-without-cluster-admin). |
 | 6 | Use Option 4 (Routes), or Option 2 without its `helm upgrade` (the overlay already sets `ClusterIP`). |
 | Every later `helm upgrade` | Pass `--values values-openshift.yaml` again. An upgrade with `values.yaml` alone restores the chart's pinned UID and `fsGroup` defaults, which `restricted-v2` rejects, and the gateway goes down. |
 
 ### Install
 
 ```bash
-helm install tyk tyk-helm/tyk-stack --version 5.4.0 \
+helm install tyk tyk-helm/tyk-stack --version 5.5.0 \
   --namespace tyk \
   --values values.yaml \
   --values values-openshift.yaml
@@ -698,7 +699,7 @@ not needed, and reads the operator licence from `tyk-conf`.
 2. A cluster admin installs the operator into the same namespace:
 
    ```bash
-   helm install tyk-operator tyk-helm/tyk-operator --version 1.5.0 \
+   helm install tyk-operator tyk-helm/tyk-operator --version 1.6.0 \
      --namespace tyk \
      --values values-operator-namespaced.yaml
    ```
@@ -724,7 +725,137 @@ not needed, and reads the operator licence from `tyk-conf`.
    ```
 
 `WATCH_NAMESPACE` limits which namespace the operator acts on, not its permissions: the chart binds
-the operator's ClusterRole cluster-wide.
+the operator's ClusterRole cluster-wide. It also limits the
+[Kubernetes Gateway API](#kubernetes-gateway-api-optional): the OperatorContexts, `Gateway` and
+`HTTPRoute` resources must all be in the watched namespace.
+
+---
+
+## Kubernetes Gateway API (Optional)
+
+From Tyk Operator 1.6.0 (tyk-charts 5.5.0), the operator can take routes from the
+[Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/). A platform team owns a `GatewayClass`
+and a `Gateway`; application teams publish `HTTPRoute` resources, and the operator creates Tyk OAS
+APIs in the Dashboard for each route, one per hostname and path group, served by this stack's
+Gateways. It is off by default. It needs the Dashboard, so it does not apply to
+[helm-oss](../helm-oss/), and every CRD step below needs cluster-admin.
+
+1. If the stack was first installed with tyk-charts earlier than 5.5.0, bring the operator's CRDs
+   up to 1.6.0. Helm installs a chart's CRDs on the first install only and never upgrades them, so
+   an upgraded release keeps the old ones, and step 4 fails with `unknown field "spec.dataPlane"`.
+
+   ```bash
+   helm show crds tyk-helm/tyk-operator --version 1.6.0 | kubectl apply --server-side --force-conflicts -f -
+   ```
+
+2. Install the Gateway API CRDs from the **experimental** channel of Gateway API v1.6.2, as the
+   Tyk Operator documentation specifies. `--server-side` is required: the CRDs are too large for a
+   client-side apply.
+
+   ```bash
+   kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.2/experimental-install.yaml
+   ```
+
+   If the cluster already has Gateway API CRDs, check their channel and version before replacing
+   them: `kubectl get crd gateways.gateway.networking.k8s.io -o jsonpath='{.metadata.annotations}'`.
+   On OpenShift 4.19 and later the Ingress Operator owns these CRDs at the version OpenShift
+   supports, and CRDs it does not manage block cluster updates
+   ([OKD docs](https://docs.okd.io/4.19/networking/ingress_load_balancing/configuring_ingress_cluster_traffic/ingress-gateway-api.html)),
+   so do not apply the experimental channel there.
+
+3. Turn the feature on with [`values-gateway-api.yaml`](values-gateway-api.yaml). Install the
+   Gateway API CRDs first: with the flag on and the CRDs missing, the operator exits at startup.
+
+   ```bash
+   helm upgrade tyk tyk-helm/tyk-stack --version 5.5.0 \
+     --namespace tyk \
+     --values values.yaml \
+     --values values-gateway-api.yaml
+   ```
+
+   Add any other files you installed with, such as `--values values-otel.yaml` and its
+   `--post-renderer`. From now on pass `values-gateway-api.yaml` on every `helm upgrade`,
+   including those in [Access Services](#6-access-services): an upgrade without it turns the flag
+   off.
+
+4. Create the class and the Gateway. [`gateway-api/class-and-gateway.yaml`](gateway-api/class-and-gateway.yaml)
+   connects them to this stack through two OperatorContexts: one for the Dashboard, using the
+   `tyk-operator-conf` secret the bootstrap job writes, and one for the Gateways, using the
+   `gateway-svc-tyk-tyk-gateway` Service.
+
+   ```bash
+   kubectl apply -f gateway-api/class-and-gateway.yaml
+   kubectl wait --for=condition=Accepted gatewayclass/tyk --timeout=60s
+   kubectl wait --for=condition=Accepted gateway/tyk -n tyk --timeout=60s
+   kubectl get gateway tyk -n tyk   # PROGRAMMED: True once the gateway Service has an address
+   ```
+
+   `PROGRAMMED` stays `False` with reason `AddressNotAssigned` while the gateway Service is a
+   `LoadBalancer` still waiting for an external address, as on a local cluster. Routes work
+   regardless; it turns `True` when the load balancer gets an address, or straight away with
+   `ClusterIP` ([Option 2](#option-2-port-forward-best-for-local-testing)).
+
+5. Publish a route. [`gateway-api/example-route.yaml`](gateway-api/example-route.yaml) deploys
+   httpbin in the `gateway-api-demo` namespace and routes `api.example.com/orders/*` to it.
+
+   ```bash
+   kubectl apply -f gateway-api/example-route.yaml
+   kubectl wait --for=condition=available deploy/httpbin -n gateway-api-demo --timeout=180s
+   kubectl wait --for=jsonpath='{.status.parents[0].conditions[?(@.type=="Accepted")].status}'=True \
+     httproute/orders -n gateway-api-demo --timeout=120s
+
+   # Skip the port-forward if Option 2 already forwards 8080
+   kubectl port-forward -n tyk svc/gateway-svc-tyk-tyk-gateway 8080:8080 &
+   sleep 2
+   curl -sf --retry 10 --retry-delay 2 --retry-all-errors \
+     -H "Host: api.example.com" http://localhost:8080/orders/get
+   ```
+
+6. Secure it. [`gateway-api/example-auth.yaml`](gateway-api/example-auth.yaml) attaches a Tyk OAS
+   definition that requires an auth token, grants access with a `SecurityPolicy` that names the
+   route, and issues one token with a `TykSession`.
+
+   ```bash
+   kubectl apply -f gateway-api/example-auth.yaml
+   kubectl wait --for=condition=Accepted tykoasapidefinition/orders-security -n gateway-api-demo --timeout=120s
+   kubectl wait --for=jsonpath='{.status.latestTransaction.status}'=Successful \
+     tyksession/orders-client -n gateway-api-demo --timeout=120s
+   TOKEN=$(kubectl get secret orders-client-tyk-key -n gateway-api-demo -o jsonpath='{.data.token}' | base64 -d)
+   sleep 5   # the Gateways reload the changed API
+
+   curl -s -o /dev/null -w '%{http_code}\n' -H "Host: api.example.com" http://localhost:8080/orders/get   # 401
+   curl -s -o /dev/null -w '%{http_code}\n' -H "Host: api.example.com" -H "Authorization: $TOKEN" \
+     http://localhost:8080/orders/get   # 200
+   ```
+
+### Things to know
+
+- **Routes carry routing only.** Authentication, rate limits and middleware come from a Tyk OAS
+  definition attached to the route or to its `Gateway`. The route owns the routing settings
+  (listen path, custom domain, upstream, Gateway tags and a few more), and the operator rejects
+  an attached definition that sets them; see
+  [Secure and extend routes](https://tyk.io/docs/product-stack/tyk-operator/gateway-api/secure-and-extend-routes).
+- **The Gateways need `enableCustomDomains` and `enableStrictRoutes`**, so a route matches on its
+  hostname and `/orders` does not also match `/orders-archive`. `values.yaml` sets both.
+- **Sharding needs a second Gateway.** This stack runs one Gateway Deployment. Setting
+  `tyk-gateway.gateway.sharding.enabled` and `tags` on it makes it load only APIs with those tags,
+  which takes every other Dashboard API off the only Gateway, and the chart asks for at least one
+  unsharded Gateway. To keep routes on their own Gateways, run a separate, sharded Gateway release
+  behind its own Service, and point `dataPlane.serviceRef` and `dataPlane.tags` at it.
+- **With the [operator without cluster-admin](#operator-without-cluster-admin)**, the stack's
+  operator is off, so `values-gateway-api.yaml` does nothing: set `enableGatewayAPI: true` on the
+  `tyk-operator` release instead. The OperatorContexts, `Gateway` and `HTTPRoute` resources must
+  be in the watched namespace, so change the examples' `gateway-api-demo` namespace (and the
+  route's `parentRefs`) to `tyk`. For namespace owners to publish routes, add
+  `gateway.networking.k8s.io` `gateways` and `httproutes` to the aggregated ClusterRole.
+- **Turning it off.** While the flag is still on, delete the `SecurityPolicy` resources with
+  `HTTPRoute` entries and the attached `TykOasApiDefinition` resources, then the `HTTPRoute`,
+  `Gateway` and `GatewayClass` resources, so the operator removes the Tyk APIs and finalizers it
+  added. Then upgrade without `values-gateway-api.yaml`. With the flag off, nothing removes them.
+  For the examples:
+  `kubectl delete -f gateway-api/example-auth.yaml -f gateway-api/example-route.yaml -f gateway-api/class-and-gateway.yaml`.
+- Tyk docs: [Get started](https://tyk.io/docs/product-stack/tyk-operator/gateway-api/get-started),
+  [reference](https://tyk.io/docs/product-stack/tyk-operator/gateway-api/reference).
 
 ---
 
@@ -735,7 +866,7 @@ Grafana, Tempo and Loki. After installing the observability stack, add the overl
 post-renderer to the install:
 
 ```bash
-helm upgrade --install tyk tyk-helm/tyk-stack --version 5.4.0 \
+helm upgrade --install tyk tyk-helm/tyk-stack --version 5.5.0 \
   --namespace tyk \
   --values values.yaml \
   --values values-otel.yaml \

@@ -1,0 +1,95 @@
+# ============================================================================
+# KUBERNETES GATEWAY API - SECURE THE EXAMPLE ROUTE
+# ============================================================================
+# Requires an auth token on the `orders` route from example-route.yaml, grants
+# access with a policy that names the route, and issues one token for it.
+#
+#   kubectl apply -f gateway-api/example-auth.yaml
+#   TOKEN=$(kubectl get secret -n gateway-api-demo orders-client-tyk-key \
+#     -o jsonpath='{.data.token}' | base64 -d)
+#
+# Routes carry routing only. The attached Tyk OAS definition below supplies
+# everything else (authentication here; rate limits and middleware likewise),
+# and must not set the routing settings: listen path, custom domain, upstream,
+# Gateway tags and a few more.
+# ============================================================================
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: orders-security
+  namespace: gateway-api-demo
+data:
+  orders-security.json: |
+    {
+      "openapi": "3.0.3",
+      "info": { "title": "orders-security", "version": "1.0.0" },
+      "paths": {},
+      "components": {
+        "securitySchemes": {
+          "authToken": { "type": "apiKey", "in": "header", "name": "Authorization" }
+        }
+      },
+      "security": [ { "authToken": [] } ],
+      "x-tyk-api-gateway": {
+        "info": { "name": "orders-security", "state": { "active": true } },
+        "server": {
+          "authentication": {
+            "enabled": true,
+            "securitySchemes": { "authToken": { "enabled": true } }
+          }
+        }
+      }
+    }
+---
+# Attaches the definition to the route instead of creating an API of its own.
+# It must be in the route's namespace.
+apiVersion: tyk.tyk.io/v1alpha1
+kind: TykOasApiDefinition
+metadata:
+  name: orders-security
+  namespace: gateway-api-demo
+spec:
+  tykOAS:
+    configmapRef:
+      name: orders-security
+      namespace: gateway-api-demo
+      keyName: orders-security.json
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: orders
+---
+# An HTTPRoute entry covers every API the operator created from the route, and
+# follows it as the route gains or loses APIs. Do not set api_id on it.
+apiVersion: tyk.tyk.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: orders-policy
+  namespace: gateway-api-demo
+spec:
+  name: Orders API access
+  state: active
+  active: true
+  access_rights_array:
+    - name: orders
+      namespace: gateway-api-demo
+      kind: HTTPRoute
+  rate: 100
+  per: 60
+  quota_max: -1
+  throttle_interval: -1
+  throttle_retry_limit: -1
+---
+# One client token on the policy. Tyk generates it; the operator writes it to
+# the Secret orders-client-tyk-key and never to status, events or logs.
+apiVersion: tyk.tyk.io/v1alpha1
+kind: TykSession
+metadata:
+  name: orders-client
+  namespace: gateway-api-demo
+spec:
+  type: token
+  alias: orders-client
+  policies:
+    - name: orders-policy

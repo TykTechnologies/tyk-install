@@ -37,7 +37,7 @@ docker compose ps
 
 # Helm
 helm repo add tyk-helm https://helm.tyk.io/public/helm/charts/ && helm repo update
-helm upgrade --install tyk tyk-helm/<chart> -n <namespace> --create-namespace \
+helm upgrade --install tyk tyk-helm/<chart> --version <pinned chart version> -n <namespace> --create-namespace \
   -f kubernetes/<target>/values.yaml -f <overlay>.yaml
 ```
 

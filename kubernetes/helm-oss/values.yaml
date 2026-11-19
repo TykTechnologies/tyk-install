@@ -64,7 +64,7 @@ global:
 tyk-gateway:
   gateway:
     # Pin the image. The chart's own default tag trails this repository's pinned
-    # version (chart 5.4.0 ships v5.13.2), and an unpinned
+    # version (chart 5.5.0 ships v5.13.5), and an unpinned
     # chart silently changes version on `helm repo update`.
     #
     # Note the nesting: this is tyk-gateway.gateway.image, NOT tyk-gateway.image.

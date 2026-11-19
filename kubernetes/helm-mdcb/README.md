@@ -60,7 +60,7 @@ kubectl create secret generic tyk-conf -n tyk \
 Then set `global.secrets.useSecretName: tyk-conf` in `values-control-plane.yaml` and install:
 
 ```bash
-helm upgrade --install tyk-cp tyk-helm/tyk-control-plane -n tyk --version 5.4.0 -f values-control-plane.yaml
+helm upgrade --install tyk-cp tyk-helm/tyk-control-plane -n tyk --version 5.5.0 -f values-control-plane.yaml
 kubectl get pods -n tyk
 ```
 
@@ -111,7 +111,7 @@ helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
 Set `connectionString` in `values-data-plane.yaml` to the address from step 2, then:
 
 ```bash
-helm upgrade --install tyk-dp tyk-helm/tyk-data-plane -n tyk-dp --version 5.4.0 -f values-data-plane.yaml
+helm upgrade --install tyk-dp tyk-helm/tyk-data-plane -n tyk-dp --version 5.5.0 -f values-data-plane.yaml
 ```
 
 ## 4. Verify the bridge

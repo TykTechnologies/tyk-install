@@ -3,7 +3,7 @@
 # ============================================================================
 # Layer this file on top of values.yaml:
 #
-#   helm install tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 \
+#   helm install tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 \
 #     -f values.yaml -f values-openshift.yaml
 #
 # It turns every pod-level, container-level and init-container securityContext

@@ -67,7 +67,7 @@ global:
 
 tyk-gateway:
   gateway:
-    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
+    # Pinned: the chart's default tag can trail this repository's pin, and an
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-gateway-ee
@@ -128,7 +128,7 @@ tyk-gateway:
 
 tyk-pump:
   pump:
-    # Pinned: chart 5.4.0 ships an older tag than this repository pins, and an
+    # Pinned: the chart's default tag can trail this repository's pin, and an
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-pump-docker-pub

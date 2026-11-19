@@ -1,0 +1,27 @@
+# ============================================================================
+# TYK OPERATOR - STANDALONE HELM VALUES (tyk-operator chart 1.6.0+)
+# ============================================================================
+# Used by this directory's README, and by the optional Operator step of
+# ../helm-hybrid. Everything not set here keeps the chart default.
+#
+#   helm install tyk-operator tyk-helm/tyk-operator --version 1.6.0 \
+#     --namespace tyk-operator --values values.yaml
+# ============================================================================
+
+# Chart 1.6.0 sets no container securityContext by default; earlier charts set
+# all of these but the seccomp profile. OpenShift's restricted-v2 SCC accepts
+# every field.
+securityContext: # PROD: Keep. Without it the controller can escalate privileges and write to its root filesystem.
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+# Kubernetes Gateway API support (Operator 1.6.0+). Install the Gateway API
+# CRDs before turning it on: with the flag on and the CRDs missing, the operator
+# exits at startup. See "Kubernetes Gateway API" in the README.
+enableGatewayAPI: false

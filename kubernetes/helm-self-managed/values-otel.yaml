@@ -6,7 +6,7 @@
 # (../observability/README.md), then layer this file on top of values.yaml and add
 # the post-renderer:
 #
-#   helm upgrade --install tyk tyk-helm/tyk-stack --version 5.4.0 -n tyk \
+#   helm upgrade --install tyk tyk-helm/tyk-stack --version 5.5.0 -n tyk \
 #     -f values.yaml -f values-otel.yaml --post-renderer ../observability/post-render.sh
 #
 # Helm 4: run `helm plugin install ../observability` once, then use --post-renderer tyk-otel.

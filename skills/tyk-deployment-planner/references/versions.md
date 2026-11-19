@@ -28,11 +28,21 @@ which source you used.
   sinks are not: Elasticsearch support covers major versions 3, 5, 6, and 7 only. Pointing it at
   Elasticsearch 8 fails at startup and restart-loops.
 - **Helm chart versions are not component versions.** The `tyk-stack` chart version and the
-  Gateway image tag move independently; pin both. Note the Helm READMEs currently pin only the
-  Bitnami dependencies and cert-manager — the Tyk chart itself is installed unpinned, so
-  `helm repo update` can change it. Pass `--version` yourself.
-- **The chart's default image tag trails this repository.** tyk-charts 5.4.0 ships Gateway and
-  Dashboard `v5.13.2`, Pump `v1.17.0` and MDCB `v2.13.0`, behind the pins here. Every Helm values
+  Gateway image tag move independently; pin both. The Helm READMEs pass `--version` on every Tyk
+  chart install and upgrade, and `helm-oss` and `helm-mdcb` also record it in `.env.example`. An
+  install without `--version` takes whatever `helm repo update` last fetched.
+- **The tyk-charts release decides the Operator version.** `tyk-stack` and `tyk-control-plane`
+  bundle the Tyk Operator chart: tyk-charts 5.5.0 ships Operator 1.6.0, the first with
+  Kubernetes Gateway API support. The standalone `tyk-helm/tyk-operator` chart is versioned on
+  its own; pin it with `--version` too.
+- **`helm upgrade` never updates the Operator CRDs.** Helm installs a chart's `crds/` on the first
+  install only. A release first installed with an older chart keeps the old CRDs after the
+  upgrade, and resources using new fields fail with `unknown field`. Apply them yourself, as
+  cluster-admin:
+  `helm show crds tyk-helm/tyk-operator --version <operator chart> | kubectl apply --server-side --force-conflicts -f -`
+- **The chart's default image tag trails this repository.** tyk-charts 5.5.0 ships Gateway and
+  Dashboard `v5.13.5`, behind the pins here, and an unpinned tag changes whenever the chart
+  does. Every Helm values
   file therefore pins its image tags explicitly — `helm-self-managed` 4, `helm-hybrid` 2,
   `helm-oss` 1, `helm-mdcb` control-plane 4 and data-plane 2. Do not add more; check what actually
   rendered:

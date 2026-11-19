@@ -72,10 +72,10 @@ jobs:
           helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
           helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
           helm repo add grafana-community https://grafana-community.github.io/helm-charts
-          helm template tyk tyk-helm/tyk-stack --version 5.4.0 -n tyk \
+          helm template tyk tyk-helm/tyk-stack --version 5.5.0 -n tyk \
             -f kubernetes/helm-self-managed/values.yaml -f kubernetes/helm-self-managed/values-otel.yaml \
             --post-renderer kubernetes/observability/post-render.sh > /tmp/tyk-stack.yaml
-          helm template tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 -n tyk-dp \
+          helm template tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 -n tyk-dp \
             -f kubernetes/helm-hybrid/values.yaml -f kubernetes/helm-hybrid/values-otel.yaml \
             --post-renderer kubernetes/observability/post-render.sh > /tmp/tyk-data-plane.yaml
           grep -q 'name: tyk-otel-gateway' /tmp/tyk-stack.yaml
@@ -100,10 +100,10 @@ jobs:
           helm version --short | grep -q '^v4' || { echo "expected Helm 4"; exit 1; }
           helm plugin install kubernetes/observability
           helm repo add tyk-helm https://helm.tyk.io/public/helm/charts/
-          helm template tyk tyk-helm/tyk-stack --version 5.4.0 -n tyk \
+          helm template tyk tyk-helm/tyk-stack --version 5.5.0 -n tyk \
             -f kubernetes/helm-self-managed/values.yaml -f kubernetes/helm-self-managed/values-otel.yaml \
             --post-renderer tyk-otel > /tmp/tyk-stack-helm4.yaml
-          helm template tyk-dp tyk-helm/tyk-data-plane --version 5.4.0 -n tyk-dp \
+          helm template tyk-dp tyk-helm/tyk-data-plane --version 5.5.0 -n tyk-dp \
             -f kubernetes/helm-hybrid/values.yaml -f kubernetes/helm-hybrid/values-otel.yaml \
             --post-renderer tyk-otel > /tmp/tyk-data-plane-helm4.yaml
           grep -q 'name: tyk-otel-gateway' /tmp/tyk-stack-helm4.yaml

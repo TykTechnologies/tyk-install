@@ -78,6 +78,7 @@ Note the packages are not published for every distribution release. Pin the upst
 | Observability, Helm overlays | `kubernetes/observability/` | Self-Managed and hybrid on Helm, via each directory's `values-otel.yaml` and a post-renderer | `bundled` |
 | Observability, shared assets | `observability/` | Dashboards, alert rules and collector config used by both platforms | `bundled` |
 | Operator for one namespace | `kubernetes/helm-self-managed/values-operator-namespaced.yaml` | Self-Managed on Helm without cluster-admin | `bundled` |
+| Kubernetes Gateway API routes | `kubernetes/helm-self-managed/gateway-api/` | Self-Managed on Helm with the Operator, layered with `values-gateway-api.yaml` (tyk-charts 5.5.0+, Operator 1.6.0+). Needs the Gateway API CRDs and cluster-admin; not for OSS, as it needs the Dashboard | `bundled-tested` |
 
 An add-on never changes the row above; it layers on it. Read the add-on's own README before
 including it in a plan.

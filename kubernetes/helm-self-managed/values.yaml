@@ -569,3 +569,26 @@ tyk-bootstrap:
     #   enabled: false
     # containerSecurityContext:
     #   enabled: false
+
+# ============================================================================
+# OPERATOR CONFIGURATION
+# ============================================================================
+tyk-operator:
+  # From chart 1.6.0 (tyk-charts 5.5.0) the operator container gets no
+  # securityContext unless you set one; earlier charts set all of these but
+  # the seccomp profile. OpenShift's restricted-v2 SCC accepts every field, so
+  # values-openshift.yaml needs no operator entry.
+  securityContext: # PROD: Keep. Without it the controller can escalate privileges and write to its root filesystem.
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  # Kubernetes Gateway API support (Operator 1.6.0+) is off by default. Turn it
+  # on with values-gateway-api.yaml once the Gateway API CRDs are installed;
+  # see "Kubernetes Gateway API (Optional)" in the README.
+  # enableGatewayAPI: false
