@@ -1,6 +1,6 @@
 # Tyk Install Repository
 
-Tyk deployment configurations for Docker, Kubernetes, and bare metal. All configurations are transparent, documented, follow best practices, and ready to use. The repository is also an [Agent Plugin](https://agent-plugins.org), so an AI coding agent can [deploy and verify Tyk from it](#deploy-with-an-ai-coding-agent).
+Tyk deployment configurations for Docker, Kubernetes, and bare metal. All configurations are transparent, documented, follow best practices, and ready to use. An AI coding agent can [deploy and verify Tyk from it](#deploy-with-an-ai-coding-agent) with the Tyk agent skills.
 
 ## Prerequisites
 
@@ -78,42 +78,54 @@ Gateway, Dashboard, MDCB and Developer Portal, and the collector can also send t
 
 ## Deploy with an AI coding agent
 
-This repository is an [Agent Plugin](https://agent-plugins.org) (specification 1.0.0): cloning it
-is the install. Open the clone with Claude Code, Codex, or any conformant agent and ask for what
-you need, for example "deploy Tyk OSS locally", "install the self-managed stack on my cluster" or
-"is this values.yaml production ready?". The agent reads [AGENTS.md](AGENTS.md) and the skills
-under `skills/`:
-
-| Skill | What it does |
-| --- | --- |
-| `tyk-deployment-planner` | Picks a topology from the [topology matrix](./skills/tyk-deployment-planner/references/topology-matrix.md), checks prerequisites, writes a deployment plan. Applies nothing. |
-| `tyk-deployment-runner` | Deploys, bootstraps, and verifies with a request through the gateway rather than container status. |
-| `tyk-production-readiness` | Audits a config against the production guidance in these files and can generate the OpenShift overlay. |
-
-To use the skills from any directory, install the repository as a plugin. It is its own
-marketplace for both CLIs:
+The agent skills for deploying Tyk are in the [tyk-skills](https://github.com/TykTechnologies/tyk-skills)
+plugin, together with the other Tyk skills. Install it once:
 
 ```bash
 # Claude Code
-claude plugin marketplace add TykTechnologies/tyk-install
-claude plugin install tyk-install@tyk-install
+claude plugin marketplace add TykTechnologies/tyk-skills
+claude plugin install tyk-skills@tyk-skills
 
 # Codex CLI
-codex plugin marketplace add TykTechnologies/tyk-install
-codex plugin add tyk-install@tyk-install
+codex plugin marketplace add TykTechnologies/tyk-skills
+codex plugin add tyk-skills@tyk-skills
 ```
 
-Without a plugin client, `./install-plugin.sh --engine claude` (or `codex`, or `both`) links the
-skills into the agent's skills directory instead. The production, performance, security and
-OpenShift guidance lives as marker comments
-beside the settings it applies to (`# PROD:`, `# PROD/PERFORMANCE:`, `# SECURITY:`,
-`# Required for deploying on RedHat OpenShift`), and one script reads them so the advice cannot
+Then ask for what you need, for example "deploy Tyk OSS locally", "install the self-managed stack
+on my cluster" or "is this values.yaml production ready?". The skills work on a clone of this
+repository:
+
+| Skill | What it does |
+| --- | --- |
+| `tyk-deployment-planner` | Picks a topology from the [topology matrix](./docs/topology-matrix.md), checks prerequisites, writes a deployment plan. Applies nothing. |
+| `tyk-deployment-runner` | Deploys, bootstraps, and verifies with a request through the gateway rather than container status. |
+| `tyk-production-readiness` | Audits a config against the production guidance in these files and can generate the OpenShift overlay. |
+
+An agent working inside a clone also reads [AGENTS.md](AGENTS.md).
+
+### Tools
+
+The same tools work without an agent:
+
+| Tool | What it does |
+| --- | --- |
+| [`tools/preflight.py`](./tools/preflight.py) | Checks a machine or cluster for what a deployment needs and prints the fix for each gap |
+| [`tools/verify_deployment.sh`](./tools/verify_deployment.sh) | Proves a deployment works: health, licence, and a request through the gateway to an upstream |
+| [`tools/profiles.py`](./tools/profiles.py) | Reads the production, performance, security and OpenShift guidance in the config files |
+| [`tools/check_topology_matrix.py`](./tools/check_topology_matrix.py) | Checks that every path in the [topology matrix](./docs/topology-matrix.md) exists |
+
+The production, performance, security and OpenShift guidance lives as marker comments beside the
+settings it applies to (`# PROD:`, `# PROD/PERFORMANCE:`, `# SECURITY:`,
+`# Required for deploying on RedHat OpenShift`), and `profiles.py` reads them so the advice cannot
 drift from the configuration:
 
 ```bash
-python3 skills/tyk-production-readiness/scripts/profiles.py \
+python3 tools/profiles.py \
   audit kubernetes/helm-self-managed/values.yaml --profile prod --profile security
 ```
+
+[`docs/`](./docs/) has the topology matrix and the prerequisites, runtime, bootstrap and debugging
+guides the skills and tools refer to.
 
 ## Utilities
 
@@ -139,12 +151,9 @@ Located in `docker/utils/`:
 
 ```text
 tyk-install/
-├── plugin.json            # Agent Plugins 1.0.0 manifest; this root is the plugin root
-├── .claude-plugin/        # Claude Code plugin and marketplace manifests for the same root
-├── .codex-plugin/, .agents/ # Codex plugin and marketplace manifests for the same root
-├── AGENTS.md              # The agent contract
-├── install-plugin.sh      # Optional: link the skills into an agent skills directory
-├── skills/                # Agent skills: deployment planner, deployment runner, production readiness
+├── AGENTS.md              # The contract for AI coding agents working in this repository
+├── docs/                  # Topology matrix; prerequisites, runtime, bootstrap and debugging guides
+├── tools/                 # preflight, verify_deployment, profiles, topology matrix check
 ├── baremetal/             # rpm/deb packages plus systemd
 ├── docker/
 │   ├── oss/               # Open source Gateway and Redis, no license

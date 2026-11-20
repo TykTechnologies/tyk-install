@@ -112,7 +112,7 @@ tyk-gateway:
 
     # PROD: Always set requests and limits. Without requests the scheduler cannot
     # place pods sensibly; without limits one Gateway can starve its neighbours.
-    # Derive the numbers from measurement - see tyk-production-readiness sizing guidance.
+    # Derive the numbers from measurement - see https://tyk.io/docs/planning-for-production.
     resources: {}
     #   requests:
     #     cpu: 200m

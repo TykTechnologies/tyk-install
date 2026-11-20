@@ -83,7 +83,7 @@ Creating an organisation is not evidence that traffic flows. After bootstrapping
 reaches an upstream:
 
 ```bash
-./skills/tyk-deployment-runner/scripts/verify_deployment.sh \
+./tools/verify_deployment.sh \
   --edition self-managed --route /<your-listen-path>/
 ```
 

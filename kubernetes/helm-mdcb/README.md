@@ -20,7 +20,7 @@ For a Tyk Cloud control plane instead of a self-hosted one, use
 - Licences: `TYK_LICENSE_KEY` (Dashboard) and an MDCB licence. Data planes need neither.
 
 ```bash
-python3 ../../skills/tyk-deployment-planner/scripts/preflight.py --platform helm --namespace tyk
+python3 ../../tools/preflight.py --platform helm --namespace tyk
 ```
 
 ## 1. Control plane
@@ -134,7 +134,7 @@ Both values files are annotated with `# PROD:`, `# PROD/PERFORMANCE:`, `# SECURI
 OpenShift overlay blocks. Generate overlays rather than editing them:
 
 ```bash
-P=../../skills/tyk-production-readiness/scripts/profiles.py
+P=../../tools/profiles.py
 
 python3 $P audit values-control-plane.yaml --profile prod --profile security
 python3 $P audit values-data-plane.yaml    --profile prod --profile security

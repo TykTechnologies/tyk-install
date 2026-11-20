@@ -3,11 +3,10 @@
 Claude-specific notes (the contract itself lives in AGENTS.md, imported above, so the two cannot
 drift):
 
-- Invoke the bundled skills as `/tyk-deployment-planner`, `/tyk-deployment-runner`, and
-  `/tyk-production-readiness`, or let the skill descriptions trigger them.
-- Working inside a clone of this repository is enough — no install step is required.
-- To make the skills available from any directory, install the repository as a plugin:
-  `claude plugin marketplace add TykTechnologies/tyk-install` then
-  `claude plugin install tyk-install@tyk-install`. The skills are then namespaced, for example
-  `/tyk-install:tyk-deployment-planner`. `./install-plugin.sh --engine claude` is the
-  symlink alternative, into `${CLAUDE_CONFIG_DIR:-~/.claude}/skills`.
+- The deployment skills (`tyk-deployment-planner`, `tyk-deployment-runner`,
+  `tyk-production-readiness`) come from the tyk-skills plugin:
+  `claude plugin marketplace add TykTechnologies/tyk-skills` then
+  `claude plugin install tyk-skills@tyk-skills`. Installed that way they are namespaced, for
+  example `/tyk-skills:tyk-deployment-planner`.
+- Working inside a clone of this repository without the plugin is fine: follow AGENTS.md and run
+  the tools in `tools/` directly.

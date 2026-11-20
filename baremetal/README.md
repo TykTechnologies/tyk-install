@@ -29,7 +29,7 @@ This path therefore configures Tyk through the environment instead. Every Tyk se
 exactly as it does everywhere else:
 
 ```bash
-python3 ../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../tools/profiles.py \
   audit confs/gateway.env --profile prod --profile security
 ```
 
@@ -144,7 +144,7 @@ filesystem will break custom plugin paths or certificates stored outside `/opt/t
 ## Bootstrap
 
 A fresh Dashboard has no organisation or user. See
-[`../skills/tyk-deployment-runner/references/bootstrap.md`](../skills/tyk-deployment-runner/references/bootstrap.md);
+[`../docs/bootstrap.md`](../docs/bootstrap.md);
 the admin API calls there apply unchanged, with `TYK_DB_ADMINSECRET` from
 `/etc/default/tyk-dashboard`.
 
@@ -201,12 +201,12 @@ sudo systemctl daemon-reload
 | permission denied on start | SELinux. Check `ausearch -m avc -ts recent`. |
 
 More in
-[`../skills/tyk-deployment-runner/references/debugging.md`](../skills/tyk-deployment-runner/references/debugging.md).
+[`../docs/debugging.md`](../docs/debugging.md).
 
 ## Before production
 
 ```bash
-python3 ../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../tools/profiles.py \
   audit confs/*.env --profile prod --profile performance --profile security
 ```
 

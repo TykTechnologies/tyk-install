@@ -97,7 +97,7 @@ oc get routes -n tyk
 For `helm-oss` and `helm-mdcb`, generate the overlay first:
 
 ```bash
-python3 skills/tyk-production-readiness/scripts/profiles.py \
+python3 tools/profiles.py \
   apply kubernetes/helm-oss/values.yaml --profile openshift -o openshift-values.yaml
 ```
 
@@ -130,7 +130,7 @@ fails and it retries with backoff:
 3. Data plane: its own local Redis, then the Gateway in RPC mode.
 
 A data plane started early is not broken — it will connect once the control plane is up. Confirm
-rather than assuming, with `check_rpc` in `scripts/verify_deployment.sh`.
+rather than assuming, with `check_rpc` in `tools/verify_deployment.sh`.
 
 ## Bare metal
 
