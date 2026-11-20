@@ -455,7 +455,7 @@ tyk-dev-portal:
 
   image:
     repository: tykio/portal
-    tag: v1.20.0
+    tag: v1.20.1
     pullPolicy: IfNotPresent
 
   hostName: tyk-dev-portal.local
