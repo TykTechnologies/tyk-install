@@ -160,6 +160,7 @@ curl http://localhost:8080/httpbin/get -H "Authorization: <your-api-key>"
 - **TYK_GW_NODESECRET** - Node secret for Gateway-Dashboard sync
 - **TYK_DB_ADMINSECRET** - Dashboard admin API authentication
 - **PORTAL_API_SECRET** - Portal API secret
+
 ---
 
 ## Phase 4: Bootstrap Process (Manual)
