@@ -1,6 +1,6 @@
 # Prerequisites
 
-Run `scripts/preflight.py --platform <docker|helm|openshift|baremetal>` rather than checking by
+Run `tools/preflight.py --platform <docker|helm|openshift|baremetal>` rather than checking by
 hand. It reports every gap with the command that fixes it, and exits non-zero so it can gate a
 deployment.
 
@@ -11,9 +11,9 @@ for an OSS deployment that binds neither. `--target` reads the ports from that d
 is obeying "resolve every blocker" and pushes the user to kill unrelated services.
 
 ```bash
-python3 skills/tyk-deployment-planner/scripts/preflight.py --platform docker --target docker/oss
-python3 skills/tyk-deployment-planner/scripts/preflight.py --platform helm --namespace tyk
-python3 skills/tyk-deployment-planner/scripts/preflight.py --platform docker \
+python3 tools/preflight.py --platform docker --target docker/oss
+python3 tools/preflight.py --platform helm --namespace tyk
+python3 tools/preflight.py --platform docker \
   --licence TYK_LICENSE_KEY --env-file docker/self-managed/.env
 ```
 
@@ -78,7 +78,7 @@ Everything above, plus:
   `helm-oss` and `helm-mdcb`, generate one:
 
   ```bash
-  python3 skills/tyk-production-readiness/scripts/profiles.py \
+  python3 tools/profiles.py \
     apply kubernetes/helm-oss/values.yaml --profile openshift -o openshift-values.yaml
   ```
 

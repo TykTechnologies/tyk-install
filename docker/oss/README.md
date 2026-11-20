@@ -30,7 +30,7 @@ Using `tyk-gateway-ee` here by mistake is a common error — that is the license
 - `curl` to verify
 
 ```bash
-python3 ../../skills/tyk-deployment-planner/scripts/preflight.py --platform docker --target .
+python3 ../../tools/preflight.py --platform docker --target .
 ```
 
 ## Quick start
@@ -54,7 +54,7 @@ curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/nope/   # 404 - routing,
 Or collect the whole evidence set at once:
 
 ```bash
-../../skills/tyk-deployment-runner/scripts/verify_deployment.sh --edition oss --route /httpbin/get
+../../tools/verify_deployment.sh --edition oss --route /httpbin/get
 ```
 
 A healthy gateway that proxies nothing is the failure worth catching, so check the proxied request
@@ -157,7 +157,7 @@ document:
 `# PROD/PERFORMANCE:`, and `# SECURITY:` markers. To see what production would change:
 
 ```bash
-python3 ../../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../../tools/profiles.py \
   audit confs/tyk.env --profile prod --profile security
 ```
 
@@ -181,7 +181,7 @@ versions 3, 5, 6, and 7 only — version 8 restart-loops.
 ## Before production
 
 ```bash
-python3 ../../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../../tools/profiles.py \
   audit confs/tyk.env --profile prod --profile performance --profile security
 ```
 

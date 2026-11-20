@@ -5,22 +5,19 @@
 Help someone deploy Tyk into their own environment, prove it works, and harden it for production,
 using the deployment configurations in this repository.
 
-Both the Codex CLI and the Claude Code CLI are supported, along with any client implementing
-[Agent Plugins](https://agent-plugins.org) 1.0.0. Working inside a clone is enough: the skills
-under `skills/` load from here. The repository is also its own plugin marketplace for both CLIs
-(`.claude-plugin/`, `.codex-plugin/` and `.agents/plugins/` describe the same root), so
-`claude plugin install tyk-install@tyk-install` and `codex plugin add tyk-install@tyk-install`
-install the same skills for use anywhere. Invoke a skill with `$name` on Codex or `/name` on
-Claude Code (namespaced as `tyk-install:name` when installed as a plugin). Shared skill files
-reference sibling skills by plain name only.
+This repository holds the deployment files, the tools in `tools/` and the guides in `docs/`. The
+agent skills that drive a deployment (`tyk-deployment-planner`, `tyk-deployment-runner` and
+`tyk-production-readiness`) are in the
+[tyk-skills](https://github.com/TykTechnologies/tyk-skills) plugin, with the other Tyk skills.
+Without them, follow this contract, `docs/topology-matrix.md` and the tools directly.
 
-## Skills
-
-| Skill | Use it when |
+| Path | Use it for |
 | --- | --- |
-| `tyk-deployment-planner` | Choosing a topology, checking prerequisites, resolving configuration. Produces a plan; applies nothing. |
-| `tyk-deployment-runner` | Starting a deployment, bootstrapping it, and proving it works. |
-| `tyk-production-readiness` | Auditing or hardening a config against this repository's production guidance. |
+| `docs/topology-matrix.md` | Which deployment paths exist, their directories and status |
+| `docs/prerequisites.md`, `tools/preflight.py` | What each platform needs, checked before anything starts |
+| `docs/runtime.md`, `docs/bootstrap.md` | Starting, bootstrapping, upgrading and tearing down each path |
+| `tools/verify_deployment.sh`, `docs/debugging.md` | Proving a deployment works, and what to read when it does not |
+| `tools/profiles.py` | Production, performance, security and OpenShift guidance from the config files |
 
 ## What Is Free And What Needs A Licence
 
@@ -33,8 +30,7 @@ wrong one is the most common mistake on these paths.
 
 ## Deployment Runs
 
-- Never invent a deployment path. `skills/tyk-deployment-planner/references/topology-matrix.md`
-  maps every supported combination to a real directory in this repository. If a request does not
+- Never invent a deployment path. `docs/topology-matrix.md` maps every supported combination to a real directory in this repository. If a request does not
   map to a row, say so.
 - Report a path's status honestly. `bundled-tested` means it is verified end to end,
   `bundled` means the artifacts exist, `guidance-only` means documentation without a tested
@@ -50,11 +46,11 @@ wrong one is the most common mistake on these paths.
 
 - Never report a deployment as working without an executable result. Component health is not
   enough on its own: prove a request reaches an upstream through the gateway.
-- Run `skills/tyk-deployment-runner/scripts/verify_deployment.sh` and include its output. On
+- Run `tools/verify_deployment.sh` and include its output. On
   Kubernetes or OpenShift pass `--namespace` so component checks use `kubectl` rather than Docker,
   and `--stack` on a host running more than one Tyk stack so it cannot inspect the wrong one.
 - Re-run configuration to show it is idempotent, and restart the stack to show state survives.
-- When verification fails, read `skills/tyk-deployment-runner/references/debugging.md` before
+- When verification fails, read `docs/debugging.md` before
   changing anything, and report the actual error rather than a summary of it.
 - If a step could not be verified, say which one and why. An unverified path is reported as
   unverified, never as done.
@@ -76,7 +72,7 @@ Production and platform guidance lives in the config files themselves, as marker
 the setting each applies to: `# PROD:`, `# PROD/PERFORMANCE:`, `# SECURITY:`, and the
 `# Required for deploying on RedHat OpenShift` blocks.
 
-`skills/tyk-production-readiness/scripts/profiles.py` is the only thing that reads them. Use it
+`tools/profiles.py` is the only thing that reads them. Use it
 rather than restating the guidance from memory, so advice cannot drift from the configuration it
 describes. It never edits a tracked file: `audit` reports, and `apply` writes an overlay.
 
@@ -101,7 +97,6 @@ different minor releases, and record the versions actually deployed in any summa
 
 ## Verification
 
-Run `./install-plugin.sh --check` after changing plugin structure, and
-`python3 validate_plugins.py` to check Agent Plugins conformance, that the Claude Code and Codex
-manifests describe the same plugin, and that every path named in the topology matrix exists. Do not claim completion if either fails; fix the failure or report the
-exact blocker.
+Run `python3 tools/check_topology_matrix.py` after adding, renaming or removing a deployment
+directory: every path the topology matrix names must exist, and no `guidance-only` row may have
+one. Do not claim completion if it fails; fix the failure or report the exact blocker.

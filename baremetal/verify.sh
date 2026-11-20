@@ -42,7 +42,7 @@ skip() { printf '  --    %s\n' "$1"; [[ -n ${2:-} ]] && printf '        %s\n' "$
 command -v curl >/dev/null 2>&1 || { echo "curl is required" >&2; exit 2; }
 if ! command -v systemctl >/dev/null 2>&1; then
   printf 'systemd not found - this script checks systemd units.\n' >&2
-  printf 'For a container deployment use ../skills/tyk-deployment-runner/scripts/verify_deployment.sh\n' >&2
+  printf 'For a container deployment use ../tools/verify_deployment.sh\n' >&2
   exit 2
 fi
 
@@ -150,7 +150,7 @@ check_proxy
 
 printf '\n%d passed, %d failed, %d not applicable\n' "$PASS" "$FAIL" "$SKIP"
 if (( FAIL > 0 )); then
-  printf 'Not verified. See ../skills/tyk-deployment-runner/references/debugging.md\n'
+  printf 'Not verified. See ../docs/debugging.md\n'
   exit 1
 fi
 [[ -z "$ROUTE" ]] && printf 'Units are healthy, but no request was proxied. Re-run with --route.\n'

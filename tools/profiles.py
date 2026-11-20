@@ -319,7 +319,7 @@ def classify(path, lines, i, body, profiles, commented):
         # Nothing below it to attach to. Do NOT drop it: one such line is the
         # control-API isolation guidance, which names two keys
         # ("TYK_GW_CONTROLAPIPORT and TYK_GW_CONTROLAPIHOSTNAME") so parses as
-        # neither, and the skill is required to always report that one.
+        # neither, and an audit must always report that one.
         names = re.findall(r"\b(TYK_[A-Z0-9_]+|PORTAL_[A-Z0-9_]+)\b", decl)
         return Finding(path=path, line=i + 1, profiles=profiles,
                        key=" and ".join(names) if names else "(see the line)",
@@ -382,7 +382,7 @@ def cmd_list(args):
         if missing:
             print(f"    note: no {', '.join(missing)} markers in this file. That means the file"
                   f" is not annotated for {'them' if len(missing) > 1 else 'it'},"
-                  " NOT that there is nothing to fix -- see hardening.md.")
+                  " NOT that there is nothing to fix; topology, HA and backups need a separate review.")
     return 0
 
 
@@ -391,7 +391,7 @@ def cmd_list(args):
 #
 # Match on the END of the key, not any substring, and never on profile membership.
 # Both were wrong before: "security in profiles" masked `allowInsecureConfigs`,
-# the one value hardening.md says to always flag, and a substring match masked
+# a value an audit must always flag, and a substring match masked
 # `TYK_DB_SECURITY_USERPASSWORDMAXDAYS` -- a day count whose value of 0 means the
 # policy is OFF, which is exactly what the reader needs to see.
 SENSITIVE_NAME = re.compile(

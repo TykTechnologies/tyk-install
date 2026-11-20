@@ -272,7 +272,7 @@ esac
 
 printf '\n%d passed, %d failed, %d not applicable\n' "$PASS" "$FAIL" "$SKIP"
 if (( FAIL > 0 )); then
-  printf 'Deployment is NOT verified. See tyk-deployment-runner/references/debugging.md\n'
+  printf 'Deployment is NOT verified. See docs/debugging.md in the tyk-install repository\n'
   exit 1
 fi
 if [[ -z "$ROUTE" ]]; then

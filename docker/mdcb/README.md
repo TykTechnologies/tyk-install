@@ -62,7 +62,7 @@ Verify before going further:
 curl -s localhost:3000/hello        # dashboard
 curl -s localhost:8080/hello | jq   # control-plane gateway
 docker logs tyk-mdcb-cp | tail -20  # must NOT be looping on a licence error
-../../../skills/tyk-deployment-runner/scripts/verify_deployment.sh --edition mdcb-control-plane
+../../../tools/verify_deployment.sh --edition mdcb-control-plane
 ```
 
 If MDCB logs `This license has expired, please renew.` in a loop, `TYK_MDCB_LICENSE` is missing,
@@ -119,7 +119,7 @@ and a request served through the data-plane gateway.
 
 ```bash
 docker logs tyk-gateway-dp | grep -i rpc
-../../../skills/tyk-deployment-runner/scripts/verify_deployment.sh \
+../../../tools/verify_deployment.sh \
   --edition mdcb-data-plane --gateway http://localhost:8081
 ```
 
@@ -141,12 +141,12 @@ tagging problem, not a connectivity one.
 | Port 5432 already allocated | A local PostgreSQL. Change `POSTGRES_PORT` in `.env`. |
 
 More in
-[`../../skills/tyk-deployment-runner/references/debugging.md`](../../skills/tyk-deployment-runner/references/debugging.md).
+[`../../docs/debugging.md`](../../docs/debugging.md).
 
 ## Before production
 
 ```bash
-python3 ../../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../../tools/profiles.py \
   audit control-plane/confs/*.env data-plane/confs/*.env --profile prod --profile security
 ```
 

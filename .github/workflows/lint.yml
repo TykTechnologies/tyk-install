@@ -26,6 +26,15 @@ jobs:
             observability/collector \
             observability/rules
 
+  topology-matrix:
+    name: Topology Matrix Paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check every matrix path exists
+        run: python3 tools/check_topology_matrix.py
+
   shellcheck:
     name: Shell Script Lint
     runs-on: ubuntu-latest

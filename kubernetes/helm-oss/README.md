@@ -12,7 +12,7 @@ For the differences between OSS and Self-Managed, see [`../../docker/oss/README.
 - Redis — **not** installed by this chart
 
 ```bash
-python3 ../../skills/tyk-deployment-planner/scripts/preflight.py --platform helm --namespace tyk
+python3 ../../tools/preflight.py --platform helm --namespace tyk
 ```
 
 `preflight.py` echoes the current context. Check it: installing into the wrong cluster is the
@@ -57,7 +57,7 @@ kubectl get pods -n tyk
 kubectl port-forward -n tyk svc/gateway-svc-tyk-oss-tyk-gateway 8080:8080 &
 
 curl -s localhost:8080/hello | jq
-../../skills/tyk-deployment-runner/scripts/verify_deployment.sh --edition oss
+../../tools/verify_deployment.sh --edition oss
 ```
 
 Service names are derived from the release name; confirm with `kubectl get svc -n tyk` rather than
@@ -85,11 +85,11 @@ overlay block. Generate an overlay rather than editing the file:
 
 ```bash
 # What production would change
-python3 ../../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../../tools/profiles.py \
   audit values.yaml --profile prod --profile security
 
 # Generate the OpenShift overlay - the one profile that is safe to generate
-python3 ../../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../../tools/profiles.py \
   apply values.yaml --profile openshift -o openshift-values.yaml
 helm template check tyk-helm/tyk-oss -f values.yaml -f openshift-values.yaml
 ```
@@ -112,7 +112,7 @@ helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.5.0 -f values
 The containers must not run as a fixed UID:
 
 ```bash
-python3 ../../skills/tyk-production-readiness/scripts/profiles.py \
+python3 ../../tools/profiles.py \
   apply values.yaml --profile openshift -o openshift-values.yaml
 
 helm upgrade --install tyk-oss tyk-helm/tyk-oss -n tyk --version 5.5.0 -f values.yaml -f openshift-values.yaml
