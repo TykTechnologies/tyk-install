@@ -7,6 +7,7 @@
 
 # Tyk Install Repository
 
+[![Licence: MPL-2.0](https://img.shields.io/badge/licence-MPL--2.0-8836FB)](LICENSE)
 [![Lint](https://img.shields.io/github/actions/workflow/status/TykTechnologies/tyk-install/lint.yml?branch=main&label=lint&color=8836FB)](https://github.com/TykTechnologies/tyk-install/actions/workflows/lint.yml)
 [![Agent skills: tyk-skills](https://img.shields.io/badge/agent_skills-tyk--skills-8836FB)](#deploy-with-an-ai-coding-agent)
 
@@ -195,3 +196,7 @@ tyk-install/
 - [Tyk Helm Charts](https://github.com/TykTechnologies/tyk-charts)
 - [Release Notes](https://tyk.io/docs/developer-support/release-notes/overview)
 - [Support](https://support.tyk.io/hc/en-gb)
+
+## License
+
+This repository is licensed under the [Mozilla Public License 2.0](LICENSE). The licence covers the files in this repository; Tyk components that need a licence key still need one to run.
