@@ -1,4 +1,14 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/tyk-logo-light.svg">
+    <img alt="Tyk" src=".github/assets/tyk-logo.svg" width="200">
+  </picture>
+</p>
+
 # Tyk Install Repository
+
+[![Lint](https://img.shields.io/github/actions/workflow/status/TykTechnologies/tyk-install/lint.yml?branch=main&label=lint&color=8836FB)](https://github.com/TykTechnologies/tyk-install/actions/workflows/lint.yml)
+[![Agent skills: tyk-skills](https://img.shields.io/badge/agent_skills-tyk--skills-8836FB)](#deploy-with-an-ai-coding-agent)
 
 Tyk deployment configurations for Docker, Kubernetes, and bare metal. All configurations are transparent, documented, follow best practices, and ready to use. An AI coding agent can [deploy and verify Tyk from it](#deploy-with-an-ai-coding-agent) with the Tyk agent skills.
 
