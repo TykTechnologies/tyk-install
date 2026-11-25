@@ -33,6 +33,11 @@ Self-Managed control plane already gives you that, with far fewer moving parts. 
 The data plane's Redis is its own and must not be shared with the control plane — keeping local
 state is exactly what lets it survive a control-plane outage.
 
+The control-plane gateway is required, although it serves no API traffic for the data planes: the
+Dashboard calls it to create keys and upload certificates, and neither works while it is down.
+Keep it off the public network, and never tag (shard) it, because it belongs to the whole
+installation. See the [MDCB control plane components](https://tyk.io/docs/api-management/mdcb#control-plane).
+
 ## Licences
 
 Two are required, and they are separate:
@@ -117,6 +122,11 @@ have since moved to the current release): control plane healthy,
 data plane logged in over RPC, an API created on the control plane propagated to the data plane,
 and a request served through the data-plane gateway.
 
+Re-verified in November 2026 with MDCB v2.14.0 and Tyk 5.16.0, with the production settings from
+[Before production](#before-production) applied: MDCB served TLS 1.3 on the RPC port, the data
+plane logged in with certificate verification on, and the synchroniser copied a hashed key into
+the data plane's Redis before the key's first use.
+
 ```bash
 docker logs tyk-gateway-dp | grep -i rpc
 ../../../tools/verify_deployment.sh \
@@ -136,6 +146,9 @@ tagging problem, not a connectivity one.
 | MDCB logs `relation "tyk_organisations" does not exist` | `TYK_MDCB_ANALYTICSCONFIG_CONNECTIONSTRING` points at the analytics database (`tyk_analytics`) instead of the Dashboard's **main** database (`tyk_dashboard`). Organisations live in the main one. Must match `TYK_DB_STORAGE_MAIN_CONNECTIONSTRING` in the control plane's `confs/tyk_analytics.env`. |
 | MDCB logs `no driver specified for mongo` | `TYK_MDCB_ANALYTICSCONFIG_TYPE` is unset, so it defaulted to `mongo` and ignored every PostgreSQL setting. |
 | `certificate signed by unknown authority` | TLS to MDCB. For development set `TYK_GW_SLAVEOPTIONS_SSLINSECURESKIPVERIFY=true`; in production install the CA instead. |
+| Data plane logs `RPC Login failed` (`rpc is either down`) while MDCB logs `tls: bad certificate` | The data plane does not trust the certificate MDCB serves on 9091. Install the issuing CA on the data plane. |
+| Dashboard returns 403 creating a key, or 404 uploading a certificate, with `lookup tyk-gateway` in the message | The control-plane gateway is down. The Dashboard creates keys and certificates through it, so it is required. |
+| Synchroniser on, but keys never reach the data plane's Redis; MDCB logs `isHashedKeys: false` | `TYK_MDCB_SYNCWORKER_HASHKEYS` is unset while `TYK_MDCB_HASHKEYS=true`. Set both to `true`. |
 | Connects, but no APIs appear | Group ID mismatch, or APIs not tagged for this data plane. |
 | Keys work on one plane, not the other | `TYK_MDCB_HASHKEYS` and the gateways' `TYK_GW_HASHKEYS` disagree. They must match. |
 | Port 5432 already allocated | A local PostgreSQL. Change `POSTGRES_PORT` in `.env`. |
@@ -155,8 +168,12 @@ Specific to MDCB, beyond the usual:
 - **Enable the synchroniser.** `TYK_MDCB_SYNCWORKER_ENABLED=true` on the control plane and
   `TYK_GW_SLAVEOPTIONS_SYNCHRONISERENABLED=true` on each data plane. Without it, data planes do
   not keep a keyspace copy — and surviving a control-plane outage is the reason you chose MDCB.
-- **TLS on the RPC link.** It crosses a network boundary between sites. Set `TYK_MDCB_USESSL=true`,
-  and set `SSLINSECURESKIPVERIFY=false` on the data planes.
+  With hashed keys (the default here), also set `TYK_MDCB_SYNCWORKER_HASHKEYS=true` to match
+  `TYK_MDCB_HASHKEYS`; otherwise the synchroniser does not copy keys.
+- **TLS on the RPC link.** It crosses a network boundary between sites. On the control plane set
+  `TYK_MDCB_SERVEROPTIONS_USESSL=true` with `TYK_MDCB_SERVEROPTIONS_CERTIFICATE_CERTFILE` and
+  `TYK_MDCB_SERVEROPTIONS_CERTIFICATE_KEYFILE`, and mount the files into the MDCB container. On
+  each data plane set `TYK_GW_SLAVEOPTIONS_USESSL=true` and `TYK_GW_SLAVEOPTIONS_SSLINSECURESKIPVERIFY=false`.
 - **Run at least two MDCB instances.** Every data plane depends on MDCB to pick up configuration
   changes.
 - The committed Postgres password and Gateway secrets are development defaults.
@@ -171,6 +188,8 @@ cd ../control-plane && docker compose down -v
 ## Reference
 
 - <https://tyk.io/docs/tyk-multi-data-centre>
+- MDCB configuration options (every `TYK_MDCB_*` name used here):
+  <https://tyk.io/docs/tyk-multi-data-centre/mdcb-configuration-options>
 - <https://tyk.io/docs/tyk-mdcb-api.mdx>
 - Kubernetes equivalent: [`../../kubernetes/helm-mdcb/`](../../kubernetes/helm-mdcb/)
 - Tyk Cloud control plane instead of self-hosted: [`../hybrid/`](../hybrid/)

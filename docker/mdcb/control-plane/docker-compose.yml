@@ -64,6 +64,10 @@ services:
       - "${MDCB_PORT:-9091}:9091"
     env_file:
       - ./confs/mdcb.env
+    # PROD: Mount the RPC TLS certificate and key named in confs/mdcb.env
+    # (TYK_MDCB_SERVEROPTIONS_CERTIFICATE_CERTFILE / _KEYFILE).
+    # volumes:
+    #   - ./certs:/opt/tyk-sink/certs:ro
     networks:
       - tyk-cp
     depends_on:
@@ -74,9 +78,11 @@ services:
       tyk-dashboard:
         condition: service_started
 
-  # A control-plane gateway is optional: it lets you serve traffic from the
-  # control plane site as well as manage configuration. Remove it if the control
-  # plane should only manage, never serve.
+  # The control-plane gateway is required. The Dashboard calls it to create
+  # keys and upload certificates, so neither works while it is down. It does not
+  # serve API traffic for the data planes.
+  # SECURITY: Keep it off the public network, and never tag (shard) it: it
+  # belongs to the whole installation.
   tyk-gateway:
     restart: unless-stopped
     image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.16.0}
