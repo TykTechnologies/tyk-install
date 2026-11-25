@@ -89,8 +89,9 @@ Gateway, Dashboard, MDCB and Developer Portal, and the collector can also send t
 
 ## Deploy with an AI coding agent
 
-The agent skills for deploying Tyk are in the [tyk-skills](https://github.com/TykTechnologies/tyk-skills)
-plugin, together with the other Tyk skills. Install it once:
+The `tyk-deployment` agent skill deploys Tyk from this repository. It is part of the
+[tyk-skills](https://github.com/TykTechnologies/tyk-skills) plugin, together with the other Tyk
+skills. Install it once:
 
 ```bash
 # Claude Code
@@ -100,17 +101,20 @@ claude plugin install tyk-skills@tyk-skills
 # Codex CLI
 codex plugin marketplace add TykTechnologies/tyk-skills
 codex plugin add tyk-skills@tyk-skills
+
+# Any other agent supported by the skills CLI
+npx skills add TykTechnologies/tyk-skills
 ```
 
 Then ask for what you need, for example "deploy Tyk OSS locally", "install the self-managed stack
-on my cluster" or "is this values.yaml production ready?". The skills work on a clone of this
-repository:
+on my cluster" or "is this values.yaml production ready?". The skill works on a clone of this
+repository, in three phases:
 
-| Skill | What it does |
+| Phase | What it does |
 | --- | --- |
-| `tyk-deployment-planner` | Picks a topology from the [topology matrix](./docs/topology-matrix.md), checks prerequisites, writes a deployment plan. Applies nothing. |
-| `tyk-deployment-runner` | Deploys, bootstraps, and verifies with a request through the gateway rather than container status. |
-| `tyk-production-readiness` | Audits a config against the production guidance in these files and can generate the OpenShift overlay. |
+| Plan | Picks a topology from the [topology matrix](./docs/topology-matrix.md), checks prerequisites, writes a deployment plan. Applies nothing. |
+| Run | Deploys, bootstraps, and verifies with a request through the gateway rather than container status. Starts only once you have approved the plan. |
+| Review | Audits a config against the production guidance in these files and can generate the OpenShift overlay. |
 
 An agent working inside a clone also reads [AGENTS.md](AGENTS.md).
 
