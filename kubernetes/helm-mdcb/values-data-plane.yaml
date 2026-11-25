@@ -71,7 +71,7 @@ tyk-gateway:
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-gateway-ee
-      tag: v5.16.0
+      tag: v5.16.3
 
     # PROD: Two or more behind a load balancer. This is the component that
     # carries request traffic, and the only one that scales with RPS.
