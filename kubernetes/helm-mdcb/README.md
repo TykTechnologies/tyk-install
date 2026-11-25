@@ -73,8 +73,9 @@ kubectl get svc -n tyk | grep mdcb
 
 ## 2. Expose MDCB to the data planes
 
-Data planes are usually in a different cluster, so a `ClusterIP` will not reach them. MDCB speaks
-gRPC on 9091 — an ingress in front of it must support gRPC.
+Data planes are usually in a different cluster, so a `ClusterIP` will not reach them. MDCB's RPC
+link on 9091 is plain TCP (TLS once `tyk-mdcb.mdcb.tls.useSSL` is on), not HTTP or gRPC, so expose
+it with a `LoadBalancer` Service or another TCP pass-through rather than an HTTP or gRPC ingress.
 
 ```bash
 kubectl patch svc mdcb-svc-tyk-cp-tyk-mdcb -n tyk -p '{"spec":{"type":"LoadBalancer"}}'
@@ -159,8 +160,8 @@ oc expose svc gateway-svc-tyk-dp-tyk-gateway -n tyk-dp --port=8080
 oc get routes -n tyk
 ```
 
-Routes are HTTP; MDCB's RPC link needs a gRPC-capable path, so expose MDCB with a LoadBalancer or
-a gRPC-aware ingress rather than a plain Route.
+Routes are HTTP, and MDCB's RPC link is plain TCP, so expose MDCB with a `LoadBalancer` Service
+rather than a plain Route.
 
 > On OpenShift Local (CRC), prefer `kubectl port-forward` — it avoids DNS configuration.
 
@@ -168,11 +169,14 @@ a gRPC-aware ingress rather than a plain Route.
 
 Beyond the markers:
 
-- **Enable the synchroniser** — `global.mdcbSynchronizer.enabled: true` on the control plane and
-  the matching gateway setting on each data plane. Without it, data planes hold no keyspace copy,
-  and surviving a control-plane outage is why you chose MDCB.
-- **TLS on the RPC link**, which crosses a network boundary between sites. Set `useSSL: true` and
-  `sslInsecureSkipVerify: false`.
+- **Enable the synchroniser** — `global.mdcbSynchronizer.enabled: true` in both values files.
+  Without it, data planes hold no keyspace copy, and surviving a control-plane outage is why you
+  chose MDCB. Keep `global.hashKeys` the same on both planes.
+- **TLS on the RPC link**, which crosses a network boundary between sites. Both ends need it: on the
+  control plane, create the `mdcb-tls-secret` TLS secret and set `tyk-mdcb.mdcb.tls.useSSL: true`;
+  on each data plane, set `global.remoteControlPlane.useSSL: true` and
+  `sslInsecureSkipVerify: false`, and trust the CA that signed the MDCB certificate. The two ends
+  must match, or the handshake fails.
 - **Two or more MDCB replicas**, and two or more gateways per data plane.
 - `APISecret: CHANGEME` and the Postgres password above are placeholders.
 - No resource requests or limits are set in either file.

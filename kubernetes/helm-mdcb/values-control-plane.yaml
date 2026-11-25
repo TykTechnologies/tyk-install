@@ -82,8 +82,16 @@ tyk-mdcb:
     replicaCount: 1
 
     service:
-      type: ClusterIP # PROD: Data planes are usually outside this cluster - expose via LoadBalancer or an Ingress that supports gRPC
+      type: ClusterIP # PROD: Data planes are usually outside this cluster - expose via a LoadBalancer or another TCP pass-through; the RPC link is plain TCP, not HTTP or gRPC
       port: 9091
+
+    # TLS on the RPC port, which the link to each data plane usually crosses a
+    # network boundary to reach. The chart mounts a kubernetes.io/tls secret;
+    # create it before installing:
+    #   kubectl create secret tls mdcb-tls-secret -n tyk --cert=mdcb.crt --key=mdcb.key
+    tls:
+      useSSL: false # PROD: Set to true, then set global.remoteControlPlane.useSSL on every data plane
+      secretName: mdcb-tls-secret
 
     # PROD: Always set requests and limits; size from the number of connected data planes.
     resources: {}
