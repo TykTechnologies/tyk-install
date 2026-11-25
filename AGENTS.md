@@ -6,10 +6,9 @@ Help someone deploy Tyk into their own environment, prove it works, and harden i
 using the deployment configurations in this repository.
 
 This repository holds the deployment files, the tools in `tools/` and the guides in `docs/`. The
-agent skills that drive a deployment (`tyk-deployment-planner`, `tyk-deployment-runner` and
-`tyk-production-readiness`) are in the
+agent skill that drives a deployment, `tyk-deployment` (plan, run and review phases), is in the
 [tyk-skills](https://github.com/TykTechnologies/tyk-skills) plugin, with the other Tyk skills.
-Without them, follow this contract, `docs/topology-matrix.md` and the tools directly.
+Without it, follow this contract, `docs/topology-matrix.md` and the tools directly.
 
 | Path | Use it for |
 | --- | --- |

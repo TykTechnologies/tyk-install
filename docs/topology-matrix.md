@@ -137,7 +137,7 @@ it fits otherwise. Work through these in order and stop at the first that decide
    - MDCB is for when sites must be **independent**: separate regions or data centres, data planes
      that must keep serving through a control-plane outage, or traffic that must stay in a
      jurisdiction. Ask *why* there are two sites before deciding.
-   - If MDCB is right, read the MDCB multi-site guidance in the `tyk-deployment-planner` skill
+   - If MDCB is right, read the MDCB multi-site guidance in the `tyk-deployment` skill
      (tyk-skills) or <https://tyk.io/docs/api-management/mdcb> before planning — MDCB does not by
      itself give two symmetric sites, and the difference matters.
 5. **RedHat OpenShift?** Pick the Helm row, then layer its committed `values-openshift.yaml`
