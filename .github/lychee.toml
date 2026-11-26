@@ -1,0 +1,36 @@
+# Link checker configuration for the Markdown Link Check job in workflows/lint.yml
+# (lycheeverse/lychee-action). Links inside code blocks and inline code are not
+# checked (include_verbatim defaults to false), so command examples and in-cluster
+# URLs never reach the network.
+
+max_retries = 3
+retry_wait_time = 5
+timeout = 30
+
+# 429: rate limiting by the target is not a broken link.
+accept = ["100..=103", "200..=299", "429"]
+
+# Loopback addresses and localhost.
+exclude_loopback = true
+
+exclude = [
+  # Local and container-network placeholders
+  '^https?://localhost',
+  '^https?://host\.docker\.internal',
+  # Placeholder hosts the reader replaces
+  'your-mdcb',
+  'your-dashboard',
+  'yourdomain\.com',
+  '\.cloud-ara\.tyk\.io',
+  '^https?://([a-z0-9-]+\.)*example\.(com|org|net)',
+  '<[^>]*>',
+  '%3C',
+  # Pages that refuse automated clients (403 for any bot)
+  '^https?://support\.tyk\.io',
+  '^https?://charts\.bitnami\.com',
+  # A Helm repository root: only its index.yaml is served
+  '^https?://helm\.tyk\.io/public/helm/charts/?$',
+  # This repository's own GitHub URLs, which point at branches a pull request
+  # has not merged yet
+  'github\.com/TykTechnologies/tyk-install',
+]

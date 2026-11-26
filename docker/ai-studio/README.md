@@ -1,6 +1,6 @@
 # Tyk AI Studio Docker Install - Quick Guide
 
-Runs Tyk AI Studio 2.2.1 (control plane), an Edge Gateway (data plane) and PostgreSQL with
+Runs Tyk AI Studio 2.2.2 (control plane), an Edge Gateway (data plane) and PostgreSQL with
 Docker Compose. For Kubernetes, see [helm-ai-studio](../../kubernetes/helm-ai-studio/).
 
 > The Edge Gateway's image and file names use the older name `microgateway` (for example
@@ -112,6 +112,16 @@ curl http://localhost:9091/health
 
 # Edition and version (community / enterprise)
 curl -k https://ai-studio.localhost:4000/auth/features
+```
+
+Or collect the evidence with the repository's verification tool. For the `ai-studio` edition it
+checks PostgreSQL and, with `--route`, a request through the Edge Gateway (`http://localhost:9091`
+by default). The route must answer 200 to a plain `GET` with no credentials, so it fits an Edge
+Gateway route you have opened for that; LLM routes need an app key.
+
+```bash
+../../tools/verify_deployment.sh --edition ai-studio --stack tyk-ai
+../../tools/verify_deployment.sh --edition ai-studio --stack tyk-ai --route /<open-edge-route>
 ```
 
 ### 5. First Login

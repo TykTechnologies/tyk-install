@@ -31,7 +31,9 @@ kubectl create namespace tyk
 kubectl config current-context      # confirm the target before installing
 ```
 
-Dependencies first:
+Dependencies first. The `bitnamilegacy` Redis and PostgreSQL images receive no further updates and
+are for evaluation only; in production use a maintained Redis and PostgreSQL (a managed service or a
+maintained chart).
 
 ```bash
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
@@ -101,7 +103,9 @@ kubectl create secret generic tyk-data-plane-conf -n tyk-dp \
 kubectl get secret tyk-data-plane-conf -n tyk-dp -o yaml   # confirm all four keys exist
 ```
 
-The data plane needs its **own** Redis — not the control plane's:
+The data plane needs its **own** Redis — not the control plane's. The `bitnamilegacy` Redis image
+receives no further updates and is for evaluation only; in production use a maintained Redis (a
+managed service or a maintained chart).
 
 ```bash
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
@@ -141,8 +145,11 @@ python3 $P audit values-control-plane.yaml --profile prod --profile security
 python3 $P audit values-data-plane.yaml    --profile prod --profile security
 
 # OpenShift is the one profile safe to generate as an overlay
-python3 $P apply values-data-plane.yaml --profile openshift -o dp-openshift.yaml
-helm template check tyk-helm/tyk-data-plane -f values-data-plane.yaml -f dp-openshift.yaml
+mkdir -p ../../.tyk-deploy
+python3 $P apply values-control-plane.yaml --profile openshift -o ../../.tyk-deploy/cp-openshift.yaml
+python3 $P apply values-data-plane.yaml    --profile openshift -o ../../.tyk-deploy/dp-openshift.yaml
+helm template check tyk-helm/tyk-control-plane -f values-control-plane.yaml -f ../../.tyk-deploy/cp-openshift.yaml
+helm template check tyk-helm/tyk-data-plane    -f values-data-plane.yaml    -f ../../.tyk-deploy/dp-openshift.yaml
 ```
 
 `apply` refuses prod/performance/security: a commented-out value is often an illustrative default

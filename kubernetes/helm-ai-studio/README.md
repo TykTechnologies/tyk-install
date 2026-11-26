@@ -1,6 +1,6 @@
 # Tyk AI Studio Kubernetes Install - Quick Guide
 
-Deploys Tyk AI Studio 2.2.1 (control plane), an Edge Gateway (data plane) and PostgreSQL with the
+Deploys Tyk AI Studio 2.2.2 (control plane), an Edge Gateway (data plane) and PostgreSQL with the
 Helm chart from the [Tyk AI Studio repository](https://github.com/TykTechnologies/ai-studio/tree/main/helm).
 
 > The chart is named `midsommar`, and the Edge Gateway is still called `microgateway` in the
@@ -144,7 +144,7 @@ for example `ChangeMe123!`.
 
    ```bash
    helm install cert-manager oci://quay.io/jetstack/charts/cert-manager \
-     --version v1.21.2 \
+     --version v1.21.3 \
      --namespace cert-manager \
      --create-namespace \
      --set crds.enabled=true
@@ -174,7 +174,7 @@ each part adds to the install command from step 3.
 
 ### The Post-Renderer
 
-The AI Studio chart (2.2.1) has no way to add environment variables or volumes to AI Studio.
+The AI Studio chart (2.2.2) has no way to add environment variables or volumes to AI Studio.
 Its configmap ignores settings such as `CORS_ALLOWED_ORIGINS`, `PLUGIN_BLOCK_INTERNAL_URLS` or the
 gRPC certificate paths.
 `post-render.sh` fills that gap at install time. It adds to AI Studio:

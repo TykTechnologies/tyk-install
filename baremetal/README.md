@@ -82,7 +82,7 @@ sudo ./install.sh --components gateway,dashboard,pump
 To pin a version rather than taking the repository's latest:
 
 ```bash
-sudo ./install.sh --components gateway --version 5.14.0
+sudo ./install.sh --components gateway --version 5.16.3
 ```
 
 If your distribution is newer than Tyk's published builds, pin the upstream repository codename.
@@ -109,9 +109,60 @@ sudo ./install.sh --components gateway,dashboard --env-file /root/tyk-licences.e
 `install.sh` is idempotent: an already-installed package is skipped, and the config and drop-ins
 are rewritten to the same content. It never prints a licence value.
 
-What it does, in order: adds the packagecloud repository per component, installs the packages,
-writes a comment-stripped copy of `confs/<component>.env` to `/etc/default/tyk-<component>`
-(mode 0640), writes a hardening drop-in per unit, then enables and restarts each service.
+What it does, in order: writes each component's packagecloud repository, pinned to its signing
+key (no downloaded script is run), installs the packages, writes a comment-stripped copy of
+`confs/<component>.env` to `/etc/default/tyk-<component>` (mode 0640), writes a hardening drop-in
+per unit, then enables and restarts each service.
+
+Signatures are always checked. On apt hosts the repository's signed `InRelease` file is verified
+against the packagecloud key in `/etc/apt/keyrings/`. On dnf and yum hosts every package is
+verified against Tyk's RPM signing key, which is imported into rpm first, and packagecloud's
+metadata against the repository key.
+
+### Air-gapped hosts
+
+`--mirror` points the installer at an internal copy of the repositories, served over `https://`
+or as a local directory (`file://`). It expects packagecloud's layout under one root
+([Tyk's air-gapped guide](https://tyk.io/docs/api-management/air-gapped-deployment) describes
+building the mirror):
+
+```text
+<root>/tyk.io.rpm.signing.key.2020           # RPM hosts: Tyk's package signing key
+<root>/tyk-gateway/gpgkey                    # the repository key
+<root>/tyk-gateway/debian/dists/bookworm/... # apt: as published, with the signed InRelease
+<root>/tyk-gateway/el/9/x86_64/repodata/...  # dnf: packages plus createrepo metadata
+```
+
+Build it on a connected machine. For dnf, `reposync` and `createrepo_c` (per component). The
+air-gapped host checks every package's signature at install time:
+
+```bash
+M=/srv/tyk-mirror; R=tyk-gateway
+cat > /etc/yum.repos.d/tyk-sync.repo <<EOF
+[tyk-sync]
+name=tyk-sync
+baseurl=https://packagecloud.io/tyk/$R/el/9/x86_64
+repo_gpgcheck=0
+gpgcheck=0
+EOF
+dnf reposync --repoid tyk-sync --newest-only --norepopath -p "$M/$R/el/9/x86_64"
+createrepo_c "$M/$R/el/9/x86_64"
+curl -fsSL -o "$M/$R/gpgkey" "https://packagecloud.io/tyk/$R/gpgkey"
+curl -fsSL -o "$M/tyk.io.rpm.signing.key.2020" https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020
+```
+
+For apt, copy the published files unchanged, so the signed `InRelease` still verifies: the
+`dists/<codename>/` index files and the `.deb` files listed in them (a tool such as `debmirror`
+does this). Copy the version you install and pin it with `--version`.
+
+Then, on the air-gapped host:
+
+```bash
+sudo ./install.sh --components gateway --mirror file:///srv/tyk-mirror --version 5.16.3
+```
+
+`createrepo_c` writes new, unsigned metadata, so with `--mirror` dnf checks package signatures
+only. Keys are only ever read over `https://` or from a local file.
 
 ## Configure
 
@@ -215,12 +266,12 @@ as the same hardcoded development value and must be replaced (`openssl rand -hex
 PostgreSQL connection string carries a committed development password, and a single Redis or
 PostgreSQL host is a data-loss risk rather than a tuning gap.
 
-## Verified
+## Supported hosts
 
-Verified in an Ubuntu 26.04 VM (systemd 259, arm64) with Tyk Gateway 5.14.0 from packagecloud
-pinned to `ubuntu noble`: unit active and enabled, config installed with comments stripped,
-`/hello` reporting `status=pass`, Redis reachable, and a file-defined API proxying a request.
-Dashboard and Pump on bare metal are not yet verified.
+Supported on systemd hosts with the packages for `ubuntu noble`/`jammy`, `debian bookworm` and
+`el 8`/`9`. A newer release of the same distribution works by pinning one of those codenames with
+`--os`/`--dist`, as above. A healthy gateway install has the unit active and enabled, the config
+installed with comments stripped, and `/hello` reporting `status=pass`.
 
 ## Reference
 

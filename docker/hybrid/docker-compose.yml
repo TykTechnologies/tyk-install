@@ -1,10 +1,10 @@
 services:
   tyk-redis:
     restart: unless-stopped
-    image: redis:7.2.0
+    image: redis:7.2.17
     container_name: tyk-redis-hybrid
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data-hybrid:/data
     networks:
@@ -20,7 +20,7 @@ services:
     image: tykio/tyk-gateway-ee:${GATEWAY_VERSION:-v5.16.0}
     container_name: tyk-gateway-hybrid
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
     env_file:
       - ./confs/tyk.env
     volumes:

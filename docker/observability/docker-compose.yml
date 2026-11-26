@@ -45,7 +45,7 @@ services:
 
   prometheus:
     restart: unless-stopped
-    image: quay.io/prometheus/prometheus:${PROMETHEUS_VERSION:-v3.15.0}
+    image: quay.io/prometheus/prometheus:${PROMETHEUS_VERSION:-v3.15.1}
     container_name: tyk-prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -64,7 +64,7 @@ services:
 
   alertmanager:
     restart: unless-stopped
-    image: quay.io/prometheus/alertmanager:${ALERTMANAGER_VERSION:-v0.34.1}
+    image: quay.io/prometheus/alertmanager:${ALERTMANAGER_VERSION:-v0.34.2}
     container_name: tyk-alertmanager
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
@@ -78,7 +78,7 @@ services:
 
   tempo:
     restart: unless-stopped
-    image: grafana/tempo:${TEMPO_VERSION:-3.1.0}
+    image: grafana/tempo:${TEMPO_VERSION:-3.1.1}
     container_name: tyk-tempo
     # Writes into the named volume, which Docker creates root-owned
     user: "0"
@@ -89,7 +89,7 @@ services:
 
   loki:
     restart: unless-stopped
-    image: grafana/loki:${LOKI_VERSION:-3.7.8}
+    image: grafana/loki:${LOKI_VERSION:-3.7.10}
     container_name: tyk-loki
     command: ["-config.file=/etc/loki/config.yaml"]
     volumes:
@@ -98,7 +98,7 @@ services:
 
   grafana:
     restart: unless-stopped
-    image: grafana/grafana:${GRAFANA_VERSION:-13.2.4}
+    image: grafana/grafana:${GRAFANA_VERSION:-13.2.7}
     container_name: tyk-grafana
     environment:
       # Anyone who can reach the port is an Admin, no login. PROD: set GF_AUTH_ANONYMOUS_ENABLED=false

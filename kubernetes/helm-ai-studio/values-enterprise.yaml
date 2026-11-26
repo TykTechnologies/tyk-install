@@ -5,9 +5,9 @@
 midsommar:
   image:
     repository: tykio/tyk-ai-studio-ent
-    tag: v2.2.1
+    tag: v2.2.2
 
 microgateway:
   image:
     repository: tykio/tyk-microgateway-ent
-    tag: v2.2.1
+    tag: v2.2.2

@@ -6,10 +6,16 @@ on:
       - main
     paths:
       - 'docker/self-managed/**'
+      - 'docker/getting-started/**'
+      - 'docker/utils/**'
+      - 'utils/bootstrap/**'
+      - '.github/workflows/test-getting-started.yml'
   workflow_dispatch:
 
 jobs:
   test:
+    # Needs the DASH_LICENSE secret, which pull requests from forks do not get
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -47,13 +53,13 @@ jobs:
             sleep 5
           done
 
-      - name: Verify containers are running
+      - name: Verify containers are running and healthy
         run: |
           cd docker/getting-started
           docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps
 
-          if docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps --format json | grep -q '"State":"exited"'; then
-            echo "Some containers failed to start or exited unexpectedly."
+          if docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml ps -a --format json | grep -qE '"State":"(exited|restarting|dead)"|"Health":"unhealthy"'; then
+            echo "Some containers exited or report an unhealthy healthcheck."
             docker compose -p tyk-getting-started -f ../self-managed/docker-compose.yml -f docker-compose.yml logs
             exit 1
           fi

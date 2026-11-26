@@ -14,7 +14,10 @@ docker compose logs -f tyk-gateway
 
 Startup ordering is encoded in the Compose files with healthchecks and
 `depends_on: condition: service_healthy`, so `up -d` handles it. Redis and PostgreSQL become
-healthy, then the Dashboard, then the Gateway.
+healthy, then the Dashboard and Gateway start; the Gateway retries until the Dashboard answers.
+The Tyk images have no shell, `curl` or `wget`, so the Tyk containers carry no healthcheck: probe
+`/hello` (Gateway, Dashboard) and `/ready` (Portal) from the host, or run
+`tools/verify_deployment.sh`.
 
 ```bash
 docker compose restart tyk-gateway   # reload after editing confs/*.env or apps/
@@ -42,8 +45,8 @@ For reference, that runs:
 
 **The licence goes in `docker/self-managed/.env`, not in `getting-started/`.** Compose takes its
 project directory from the *first* `-f` file, so it reads `docker/self-managed/.env`. A `.env`
-placed in `getting-started/` is silently ignored — verified: with one there, `compose config` still
-warns `"TYK_LICENSE_KEY" variable is not set`; with one in `../self-managed/`, it does not.
+placed in `getting-started/` is silently ignored: with one there, `compose config` still warns
+`"TYK_LICENSE_KEY" variable is not set`; with one in `../self-managed/`, it does not.
 
 Compose profiles gate optional components:
 
@@ -110,7 +113,7 @@ collector, Prometheus, Tempo, Loki and Grafana. It is an overlay, so the base st
 
 ```bash
 # Docker: from docker/self-managed or docker/hybrid
-docker compose -f docker-compose.yml -f ../observability/docker-compose.otel.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.otel.yml up -d
 
 # Helm: add the values-otel.yaml overlay to the install command
 helm upgrade --install tyk tyk-helm/tyk-stack -n tyk --version 5.5.0 \

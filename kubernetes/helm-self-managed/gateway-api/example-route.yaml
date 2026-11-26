@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
         - name: httpbin
-          image: mccutchen/go-httpbin:v2.15.0
+          image: mccutchen/go-httpbin:2.26.0
           ports:
             - containerPort: 8080
           securityContext:

@@ -26,7 +26,10 @@ helm repo update
 kubectl create namespace tyk
 ```
 
-Redis first. These are the versions this configuration was tested against:
+Redis first. The `bitnamilegacy` Redis image receives no further updates and is for evaluation only;
+in production use a maintained Redis (a managed service or a maintained chart).
+
+Pinned chart versions:
 
 ```bash
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
@@ -57,7 +60,7 @@ kubectl get pods -n tyk
 kubectl port-forward -n tyk svc/gateway-svc-tyk-oss-tyk-gateway 8080:8080 &
 
 curl -s localhost:8080/hello | jq
-../../tools/verify_deployment.sh --edition oss
+../../tools/verify_deployment.sh --edition oss --namespace tyk --route /<your-listen-path>/
 ```
 
 Service names are derived from the release name; confirm with `kubectl get svc -n tyk` rather than
