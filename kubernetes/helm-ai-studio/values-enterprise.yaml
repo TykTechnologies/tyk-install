@@ -1,13 +1,14 @@
 # Enterprise Edition overlay. Layer on top of values.yaml:
 #   --values values.yaml --values values-enterprise.yaml
 # Pass the license with --set (see README); it is required before the first start.
+# AI Studio 2.3 needs a license issued for 2.3: a 2.2 license is refused.
 
 midsommar:
   image:
     repository: tykio/tyk-ai-studio-ent
-    tag: v2.2.2
+    tag: v2.3.0-rc6
 
 microgateway:
   image:
     repository: tykio/tyk-microgateway-ent
-    tag: v2.2.2
+    tag: v2.3.0-rc6

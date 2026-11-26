@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Helm post-renderer for the AI Studio chart.
 #
-# The chart has no extraEnv or extra volumes for AI Studio, so settings such as
-# CSRF_KEY, CORS_ALLOWED_ORIGINS or the gRPC TLS paths cannot be set through
-# values. This adds, all optional (nothing breaks when they do not exist):
+# The chart cannot load a whole ConfigMap or Secret into AI Studio's environment,
+# and its Edge Gateway subchart cannot mount extra volumes (the gRPC CA needs one).
+# This adds, all optional (nothing breaks when they do not exist):
 #   - ConfigMap tyk-ai-studio-extra and Secret tyk-ai-studio-extra as env for AI Studio
 #   - Secret tyk-ai-studio-grpc-tls at /opt/tyk-ai-studio/certs/grpc (AI Studio)
 #     and its tls.crt at /opt/tyk-microgateway/certs/grpc (Edge Gateway)

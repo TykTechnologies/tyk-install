@@ -1,18 +1,18 @@
-# Tyk AI Studio 2.2.2 - values for the `midsommar` chart in TykTechnologies/ai-studio (helm/)
+# Tyk AI Studio - values for the `midsommar` chart in TykTechnologies/ai-studio (helm/)
 #
 # Community Edition, AI Studio (control plane) + Edge Gateway (data plane) + internal PostgreSQL.
 # Secrets are passed with --set from .env (see README), never stored here.
 # Layer values-enterprise.yaml for Enterprise images and values-ingress.yaml for Ingress + TLS.
 
 # Names every AI Studio resource "tyk-ai-studio" (service, configmap, postgres, ...).
-# Install the release as "tyk-ai-studio" too: the Edge Gateway dials "<release>:50051"
-# and AI Studio proxies to "<release>-microgateway:8080".
+# Install the release as "tyk-ai-studio" too: AI Studio proxies to
+# "<release>-microgateway:8080", and post-render.sh patches those names.
 fullnameOverride: tyk-ai-studio
 
 midsommar:
   image:
     repository: tykio/tyk-ai-studio # Enterprise: tykio/tyk-ai-studio-ent
-    tag: v2.2.2
+    tag: v2.3.0-rc6
   ingress:
     enabled: false
   service:
@@ -38,7 +38,16 @@ config:
   devMode: "true" # Required for login over plain HTTP. Set "false" behind HTTPS.
   databaseType: "postgres"
   ociCacheDir: "./data/cache/plugins" # Required for the plugin marketplace
-  ociRequireSignature: "false" # cosign is not available in distroless images
+  # Enterprise verifies OCI plugin signatures and refuses unsigned plugins.
+  # Community Edition cannot verify them: it logs a warning and loads them unverified.
+  ociRequireSignature: "true"
+  # Calls to internal addresses (LLMs, embedders, tools, data sources, guardrail
+  # providers) are refused unless the host is allowed. These are the optional
+  # Services from values-rag.yaml and presidio.yaml. Add your own in-cluster hosts
+  # (".svc.cluster.local" allows every Service), and keep microgateway.config below
+  # in step: each process applies its own list.
+  blockInternalUpstreams: "true"
+  allowedInternalHosts: "tyk-ai-studio-transformer,tyk-ai-studio-reranker,presidio-analyzer,presidio-anonymizer"
   gatewayMode: "control"
   grpcPort: "50051"
   grpcHost: "0.0.0.0"
@@ -61,11 +70,16 @@ microgateway:
   enabled: true
   image:
     repository: tykio/tyk-microgateway # Enterprise: tykio/tyk-microgateway-ent
-    tag: v2.2.2
+    tag: v2.3.0-rc6
   service:
     type: ClusterIP
     port: 8080
   config:
+    # The AI Studio gRPC Service, named by fullnameOverride above. From 2.3 the chart
+    # refuses to render when this does not match the release's Service.
+    controlEndpoint: "tyk-ai-studio:50051"
     # EDGE_ID is set per pod from the pod name
     edgeNamespace: "default"
+    blockInternalUpstreams: true
+    allowedInternalHosts: "tyk-ai-studio-transformer,tyk-ai-studio-reranker,presidio-analyzer,presidio-anonymizer"
   # Set with --set: secrets.edgeAuthToken, secrets.encryptionKey, secrets.tykAiLicense

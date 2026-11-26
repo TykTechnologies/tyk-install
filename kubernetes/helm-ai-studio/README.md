@@ -1,7 +1,9 @@
 # Tyk AI Studio Kubernetes Install - Quick Guide
 
-Deploys Tyk AI Studio 2.2.2 (control plane), an Edge Gateway (data plane) and PostgreSQL with the
+Deploys Tyk AI Studio (control plane), an Edge Gateway (data plane) and PostgreSQL with the
 Helm chart from the [Tyk AI Studio repository](https://github.com/TykTechnologies/ai-studio/tree/main/helm).
+The chart version is `AI_STUDIO_VERSION` in `.env.example`, and the image tags are in the values
+files.
 
 > The chart is named `midsommar`, and the Edge Gateway is still called `microgateway` in the
 > chart values and image names. This guide uses "Edge Gateway" for the same component.
@@ -11,7 +13,8 @@ Helm chart from the [Tyk AI Studio repository](https://github.com/TykTechnologie
 - Kubernetes cluster running, `kubectl` configured and connected
 - Helm 3 or Helm 4, and `git`
 - `openssl` to generate secrets
-- Enterprise Edition only: a Tyk AI license key
+- Enterprise Edition only: a Tyk AI license issued for the AI Studio version you run. AI Studio
+  2.3 refuses a license issued for 2.2 or earlier: ask your Tyk account manager for a 2.3 license.
 - Ingress + TLS only: an Ingress controller and cert-manager
 
 ## Files
@@ -24,7 +27,7 @@ Helm chart from the [Tyk AI Studio repository](https://github.com/TykTechnologie
 | `values-ingress.yaml`    | Overlay: Ingress + TLS for AI Studio and the Edge Gateway             |
 | `values-rag.yaml`        | Optional: Reranker and Transformer Server                            |
 | `values-production.yaml` | Optional: production settings (gRPC TLS, metrics token)              |
-| `studio-extra.env.example` | Optional: production settings the chart cannot set               |
+| `studio-extra.env.example` | Optional: production settings for the post-renderer               |
 | `post-render.sh`         | Applies `studio-extra.env` and the gRPC TLS secret to the release    |
 | `plugin.yaml`            | Helm 4 plugin that runs `post-render.sh` (name: `tyk-ai-studio`)     |
 | `presidio.yaml`          | Optional: Microsoft Presidio for PII Guardrails (Enterprise)         |
@@ -52,6 +55,8 @@ openssl rand -hex 16   # POSTGRES_PASSWORD
 ```
 
 Keep `POSTGRES_PASSWORD` to letters and digits: the chart puts it into the connection URL without escaping.
+Never change `TYK_AI_SECRET_KEY` after the first install: it encrypts LLM credentials, App keys and
+the secret store, and App keys stop validating with another value.
 
 Set `TYK_AI_LICENSE` only for the Enterprise Edition. Then load the variables:
 
@@ -70,8 +75,12 @@ helm dependency build ai-studio/helm
 
 ### 3. Install
 
-Install the release as `tyk-ai-studio`. `values.yaml` sets `fullnameOverride: tyk-ai-studio`, and
-the Edge Gateway reaches AI Studio at `<release>:50051`, so the two names must match.
+Install the release as `tyk-ai-studio`. `values.yaml` names the AI Studio resources
+`tyk-ai-studio` (`fullnameOverride`) and points the Edge Gateway at `tyk-ai-studio:50051`
+(`microgateway.config.controlEndpoint`). AI Studio reaches the Edge Gateway at
+`<release>-microgateway`, and the post-renderer patches `tyk-ai-studio-microgateway`, so the
+release name must match. The chart refuses to render when the control endpoint does not match its
+AI Studio Service.
 
 ```bash
 helm upgrade --install tyk-ai-studio ./ai-studio/helm \
@@ -99,8 +108,8 @@ kubectl wait --for=condition=available deploy --all -n tyk-ai --timeout=300s
 kubectl get pods -n tyk-ai
 ```
 
-On the first install, AI Studio restarts until PostgreSQL is ready, and the Edge Gateway restarts
-until the AI Studio gRPC server is ready. This is expected.
+On the first install, AI Studio waits for PostgreSQL (up to `DATABASE_STARTUP_TIMEOUT`, 60
+seconds), and the Edge Gateway restarts until the AI Studio gRPC server is ready. This is expected.
 
 ### 4. Access Services
 
@@ -164,6 +173,30 @@ For an external database, set `database.internal=false` and
 
 ---
 
+## Internal Network Addresses
+
+AI Studio and the Edge Gateway refuse calls to internal addresses (loopback, private ranges,
+link-local and other internal ranges, by IP or by a name that resolves to one) unless the host is
+allowed. This covers LLMs, embedders, tools, data sources, vector stores and guardrail providers.
+A refused call answers `502` with `blocked by LLM_UPSTREAM_BLOCK_INTERNAL`.
+
+Every in-cluster Service has a private address. `values.yaml` allows the optional Services by name
+in `config.allowedInternalHosts` and `microgateway.config.allowedInternalHosts`
+(`tyk-ai-studio-transformer`, `tyk-ai-studio-reranker`, `presidio-analyzer`,
+`presidio-anonymizer`) and keeps blocking on for everything else. Add your own in-cluster hosts to
+both values, for example an Ollama Service; `.svc.cluster.local` allows every Service. Each process
+applies its own setting, so keep the two lists the same. An administrator can instead turn on
+**Allow internal host** on a single LLM, embedder, tool, data source, guardrail or plugin.
+
+## Usage Telemetry
+
+AI Studio sends anonymised usage statistics to Tyk by default. To stop it, add
+`--set extraEnv[0].name=TELEMETRY_ENABLED --set-string extraEnv[0].value=false` to the install
+command, and on Enterprise also `LICENSE_DISABLE_TELEMETRY=true` the same way as `extraEnv[1]`
+([Telemetry and privacy](https://tyk.io/docs/ai-management/ai-studio/telemetry)).
+
+---
+
 ## Optional Components
 
 The [Kubernetes install docs](https://tyk.io/docs/ai-management/ai-studio/deployment-k8s) list the
@@ -174,14 +207,16 @@ each part adds to the install command from step 3.
 
 ### The Post-Renderer
 
-The AI Studio chart (2.2.2) has no way to add environment variables or volumes to AI Studio.
-Its configmap ignores settings such as `CORS_ALLOWED_ORIGINS`, `PLUGIN_BLOCK_INTERNAL_URLS` or the
-gRPC certificate paths.
-`post-render.sh` fills that gap at install time. It adds to AI Studio:
+Only the [Production Settings](#production-settings) need the post-renderer. The AI Studio chart
+takes single variables and volumes for AI Studio (`extraEnv`, `extraVolumes`,
+`extraVolumeMounts`), but it cannot load a whole ConfigMap or Secret as environment variables, and
+its Edge Gateway subchart cannot mount a volume, which the gRPC CA certificate needs.
+`post-render.sh` fills that gap at install time. It adds:
 
-- ConfigMap `tyk-ai-studio-extra` and Secret `tyk-ai-studio-extra` as environment variables
-- Secret `tyk-ai-studio-grpc-tls` as files, for the gRPC control connection (the Edge Gateway gets
-  its `tls.crt`)
+- ConfigMap `tyk-ai-studio-extra` and Secret `tyk-ai-studio-extra` as environment variables for
+  AI Studio
+- Secret `tyk-ai-studio-grpc-tls` as files, for the gRPC control connection (AI Studio gets the
+  certificate and key, the Edge Gateway its `tls.crt`)
 
 All three are optional, so the post-renderer is safe to use without them. It needs `kubectl`
 (for `kubectl kustomize`). To use it with Helm 3, add this to the install command:
@@ -233,6 +268,8 @@ Add `--values values-rag.yaml`.
   standalone **Embedder** with API compatibility `openai`, endpoint
   `http://tyk-ai-studio-transformer:8000/v1` and a model such as
   `sentence-transformers/all-MiniLM-L6-v2`.
+- Both Services are in the internal host allow list (see
+  [Internal Network Addresses](#internal-network-addresses)).
 - The chart's own defaults point at `midsommar/...` images that do not exist; `values-rag.yaml`
   sets the `tykio/...` images.
 
@@ -250,9 +287,10 @@ In a Guardrail filter, choose the **Microsoft Presidio** provider and set:
 - **Analyzer URL**: `http://presidio-analyzer:3000`
 - **Anonymizer URL** (optional): `http://presidio-anonymizer:3000`
 
-Do not set `LLM_UPSTREAM_BLOCK_INTERNAL=true` without allowing these hosts in
-`LLM_UPSTREAM_ALLOWED_INTERNAL_HOSTS`: Guardrail providers follow the same outbound rules as LLM
-upstreams.
+Guardrail providers follow the same outbound rules as LLM upstreams. `values.yaml` allows both
+hosts (see [Internal Network Addresses](#internal-network-addresses)); if you rename them, change
+the allow lists too. From 2.3, guardrails also scan tool results, so Presidio receives tool output
+as well as prompts.
 
 ### Production Settings
 
@@ -322,13 +360,62 @@ helm upgrade --install tyk-ai-studio ./ai-studio/helm \
 
 ## Upgrading
 
-Upgrade AI Studio and the Edge Gateway together. Clone the new tag, update the image tags in the
-values files, and rerun the install command.
+Upgrade AI Studio and the Edge Gateway together. Back up the database first: rolling back means
+restoring it. Clone the new tag, update the image tags in the values files, and rerun the install
+command.
 
-From 2.2.1 the AI Studio Deployment uses the `Recreate` strategy, so AI Studio is briefly
-unavailable during an upgrade. The Edge Gateway keeps serving traffic.
+With one replica (`replicaCount: 1`, the default) the AI Studio Deployment uses the `Recreate`
+strategy, so AI Studio is briefly unavailable during an upgrade. The Edge Gateway keeps serving
+traffic.
 
-### Changes in 2.2 that affect this install
+### Upgrading from 2.2 to 2.3
+
+Changes made in this install:
+
+- **The Edge Gateway's control endpoint is set** (`microgateway.config.controlEndpoint:
+  tyk-ai-studio:50051`). The 2.3 chart refuses to render when the endpoint does not match its AI
+  Studio Service.
+- **Internal addresses are blocked by default** (`config.blockInternalUpstreams` and
+  `microgateway.config.blockInternalUpstreams`). `values.yaml` allows the optional Services by
+  name. Add any other in-cluster host you use, such as an Ollama Service, before upgrading. See
+  [Internal Network Addresses](#internal-network-addresses).
+- **OCI plugin signatures are required** (`config.ociRequireSignature: "true"`). 2.3 verifies them
+  without `cosign`, so the install no longer turns the check off. This only changes the Enterprise
+  Edition: sign your own OCI plugins, configure their keys (`OCI_PLUGINS_PUBKEY_*`), or set
+  `config.ociRequireSignature` and `microgateway.config.ociPluginsRequireSignature` to `"false"`.
+
+Before you upgrade:
+
+- **Enterprise: get a 2.3 license.** A 2.2 license is refused and AI Studio and the Edge Gateway do
+  not start. Keep the 2.2 license until the upgrade is confirmed.
+- **List your `$ENV/` references.** They resolve only for names in `AI_STUDIO_ENV_REF_ALLOWLIST`
+  (set it with `extraEnv`). Prefer the secret store (`$SECRET/` references).
+- **Vendor keys are no longer read from the environment** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
+  and others). Set the key on each LLM, embedder and data source.
+- **Plugins no longer inherit the pod environment.** List the variables a plugin needs in
+  `PLUGIN_ENV_PASSTHROUGH`. Upgrade the marketplace plugins to their 2.3 releases.
+- **Back up the database.** The first 2.3 start encrypts LLM keys and App keys with
+  `TYK_AI_SECRET_KEY`. A 2.2 AI Studio started on that database afterwards refuses every App key,
+  so stop every 2.2 replica before the first 2.3 replica starts. With one replica the `Recreate`
+  strategy does this; with `replicaCount` above 1, set `midsommar.strategy.type: Recreate` for this
+  upgrade.
+- **Upload a custom logo again.** 2.3 keeps the logo and favicon in the database. Here they were
+  stored in the `emptyDir`, so a logo uploaded on 2.2 is gone after the upgrade.
+
+Behavior changes in 2.3 to check:
+
+- **The chart adds a startup probe and a 10-second `preStop` delay** for AI Studio (Kubernetes
+  1.30 and later), and the Edge Gateway's default memory limit rises from 512Mi to 1Gi.
+- **Existing guardrails scan tool results** (Enterprise), and remote providers such as Presidio
+  receive tool output.
+- **Edges older than 2.3** block guardrailed traffic, fail Bedrock calls and do not enforce LLM
+  budgets against a 2.3 AI Studio. Upgrade the Edge Gateway with AI Studio.
+- **The Edge Gateway answers `404` on `/api/v1`.** Configure edges from AI Studio.
+- **API keys are shown in full only when issued.** Roll a key to see a new one.
+
+See the [2.3.0 changelog](https://github.com/TykTechnologies/ai-studio/blob/v2.3.0-rc6/CHANGELOG-v2.3.0.md#upgrade-notes) for the full list.
+
+### Upgrading from 2.1 to 2.2
 
 - **New tools are chat-only by default.** Enable REST or MCP access on each tool.
 - **`/metrics` is off** unless `METRICS_AUTH_TOKEN` or `METRICS_ALLOW_UNAUTHENTICATED=true` is set.
@@ -352,9 +439,21 @@ See the [AI Studio release notes](https://tyk.io/docs/developer-support/release-
 kubectl logs -n tyk-ai -l app=microgateway
 ```
 
-- `CONTROL_ENDPOINT` must be `tyk-ai-studio:50051`. Install the release as `tyk-ai-studio`.
+- `CONTROL_ENDPOINT` must be `tyk-ai-studio:50051` (`microgateway.config.controlEndpoint` in
+  `values.yaml`). Install the release as `tyk-ai-studio`.
 - `microgateway.secrets.edgeAuthToken` must match `config.grpcAuthToken`.
 - `microgateway.secrets.encryptionKey` must match `config.microgatewayEncryptionKey`.
+
+### Calls Answer 502 `blocked by LLM_UPSTREAM_BLOCK_INTERNAL`
+
+The upstream resolves to an internal address. Add its host to `config.allowedInternalHosts` and
+`microgateway.config.allowedInternalHosts`, then rerun the install command. See
+[Internal Network Addresses](#internal-network-addresses).
+
+### AI Studio Exits at Startup with `license validation failed at boot`
+
+The Enterprise license is missing, expired or issued for an older version. AI Studio 2.3 needs a
+license issued for 2.3.
 
 ### Login Fails over HTTP
 
@@ -366,8 +465,8 @@ Set `config.devMode: "true"`. Session cookies need it without HTTPS.
 
 ### Data on Restart
 
-AI Studio's `data/` directory (plugin and marketplace caches, branding uploads) is an `emptyDir`.
-All configuration is stored in PostgreSQL.
+AI Studio's `data/` directory (plugin and marketplace caches, exports) is an `emptyDir`. All
+configuration, and from 2.3 the custom logo and favicon, is stored in PostgreSQL.
 
 ---
 
