@@ -22,13 +22,27 @@ To run only the open source Gateway, use [`docker/oss/`](./docker/oss/) or [`kub
 Required licenses depend on deployment type:
 
 - **OSS**: none
-- **Self-Managed**: Dashboard license, Portal license (optional)
+- **Self-Managed**: Dashboard license, Portal license (optional); the Helm values also enable the Operator, which needs an Operator license (or set `global.components.operator=false`)
 - **Hybrid**: Tyk Cloud account with MDCB credentials
 - **MDCB**: Dashboard license and MDCB license
 - **Operator**: Operator license
 - **AI Studio**: none for Community Edition, AI license for Enterprise Edition
 
 ## Quick Start
+
+### Open source Gateway, no licence
+
+```bash
+git clone https://github.com/TykTechnologies/tyk-install && cd tyk-install/docker/oss
+cp .env.example .env && docker compose up -d
+until curl -sf localhost:8080/hello >/dev/null; do sleep 2; done
+curl -s localhost:8080/httpbin/get    # proxied through Tyk to a local upstream
+../../tools/verify_deployment.sh --edition oss --route /httpbin/get
+```
+
+See the [OSS guide](./docker/oss/) for the keyed example and the rate-limit proof of concept.
+
+### Self-Managed, with a licence
 
 The fastest way to try Tyk Self-Managed is the Getting Started deployment. It starts the full stack and preloads sample APIs, policies and a configured Developer Portal:
 
@@ -37,10 +51,11 @@ git clone https://github.com/TykTechnologies/tyk-install
 cd tyk-install/docker/self-managed
 cp .env.example .env   # set TYK_LICENSE_KEY and TYK_PORTAL_LICENSE
 cd ../getting-started
-bash start.sh
+./start.sh
+../../tools/verify_deployment.sh --edition self-managed
 ```
 
-Log in to Tyk Dashboard at `http://localhost:3000` with `developer@tyk.io` / `specialpassword`. For the full walkthrough, see the [Tyk Self-Managed quick start](https://tyk.io/docs/getting-started/quick-start).
+The sample APIs need an API key, so add `--route` with a key-free API of your own to prove a request reaches an upstream. Log in to Tyk Dashboard at `http://localhost:3000` with `developer@tyk.io` / `specialpassword`. For the full walkthrough, see the [getting-started guide](./docker/getting-started/) and the [Tyk Self-Managed quick start](https://tyk.io/docs/getting-started/quick-start).
 
 Or choose a deployment:
 
@@ -49,7 +64,7 @@ Or choose a deployment:
 | Deployment       | Description                                                     | Guide                            |
 | ---------------- | --------------------------------------------------------------- | -------------------------------- |
 | **OSS**          | Open source Gateway and Redis. No license, no Dashboard. Keyless and keyed (Tyk OAS) examples, a 10 requests/minute key in five minutes | [README](./docker/oss/)          |
-| **Getting Started** | Self-Managed stack with sample APIs, policies and Portal content (`start.sh`) | [Quick start](https://tyk.io/docs/getting-started/quick-start) |
+| **Getting Started** | Self-Managed stack with sample APIs, policies and Portal content (`start.sh`) | [README](./docker/getting-started/) |
 | **Self-Managed** | Full stack: Dashboard, Gateway, Portal, Pump, Redis, PostgreSQL | [README](./docker/self-managed/) |
 | **Hybrid**       | Data plane connecting to Tyk Cloud/MDCB: Gateway, Pump, Redis   | [README](./docker/hybrid/)       |
 | **MDCB**         | Self-managed control plane plus remote data planes              | [README](./docker/mdcb/)         |
@@ -73,7 +88,7 @@ Self-Managed and Hybrid both run on Red Hat OpenShift from tyk-charts 5.4.0 by l
 
 | Deployment  | Description                                                                                     | Guide                  |
 | ----------- | ----------------------------------------------------------------------------------------------- | ---------------------- |
-| **Gateway** | rpm/deb packages with systemd, no containers. Dashboard and Pump are supported but less tested | [README](./baremetal/) |
+| **Gateway** | rpm/deb packages with systemd, no containers. Also installs Dashboard and Pump | [README](./baremetal/) |
 
 ### Observability (Optional)
 
@@ -89,8 +104,9 @@ Gateway, Dashboard, MDCB and Developer Portal, and the collector can also send t
 
 ## Deploy with an AI coding agent
 
-The agent skills for deploying Tyk are in the [tyk-skills](https://github.com/TykTechnologies/tyk-skills)
-plugin, together with the other Tyk skills. Install it once:
+The `tyk-deployment` agent skill deploys Tyk from this repository. It is part of the
+[tyk-skills](https://github.com/TykTechnologies/tyk-skills) plugin, together with the other Tyk
+skills. Install it once:
 
 ```bash
 # Claude Code
@@ -100,17 +116,20 @@ claude plugin install tyk-skills@tyk-skills
 # Codex CLI
 codex plugin marketplace add TykTechnologies/tyk-skills
 codex plugin add tyk-skills@tyk-skills
+
+# Any other agent supported by the skills CLI
+npx skills add TykTechnologies/tyk-skills
 ```
 
 Then ask for what you need, for example "deploy Tyk OSS locally", "install the self-managed stack
-on my cluster" or "is this values.yaml production ready?". The skills work on a clone of this
-repository:
+on my cluster" or "is this values.yaml production ready?". The skill works on a clone of this
+repository, in three phases:
 
-| Skill | What it does |
+| Phase | What it does |
 | --- | --- |
-| `tyk-deployment-planner` | Picks a topology from the [topology matrix](./docs/topology-matrix.md), checks prerequisites, writes a deployment plan. Applies nothing. |
-| `tyk-deployment-runner` | Deploys, bootstraps, and verifies with a request through the gateway rather than container status. |
-| `tyk-production-readiness` | Audits a config against the production guidance in these files and can generate the OpenShift overlay. |
+| Plan | Picks a topology from the [topology matrix](./docs/topology-matrix.md), checks prerequisites, writes a deployment plan. Applies nothing. |
+| Run | Deploys, bootstraps, and verifies with a request through the gateway rather than container status. Starts only once you have approved the plan. |
+| Review | Audits a config against the production guidance in these files and can generate the OpenShift overlay. |
 
 An agent working inside a clone also reads [AGENTS.md](AGENTS.md).
 
@@ -136,7 +155,8 @@ python3 tools/profiles.py \
 ```
 
 [`docs/`](./docs/) has the topology matrix and the prerequisites, runtime, bootstrap and debugging
-guides the skills and tools refer to.
+guides the skills and tools refer to. For hosts with no access to public registries, see
+[air-gapped deployments](./docs/air-gapped.md).
 
 ## Utilities
 
@@ -163,7 +183,7 @@ Located in `docker/utils/`:
 ```text
 tyk-install/
 ├── AGENTS.md              # The contract for AI coding agents working in this repository
-├── docs/                  # Topology matrix; prerequisites, runtime, bootstrap and debugging guides
+├── docs/                  # Topology matrix; prerequisites, runtime, bootstrap, debugging, air-gapped
 ├── tools/                 # preflight, verify_deployment, profiles, topology matrix check
 ├── baremetal/             # rpm/deb packages plus systemd
 ├── docker/

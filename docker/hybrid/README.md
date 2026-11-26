@@ -31,10 +31,10 @@ cp .env.example .env
 
 #### For Tyk Cloud
 
-1. Login to [Tyk Cloud Console](https://account.cloud-ara.tyk.io/)
+1. Login to [Tyk Cloud Console](https://account.cloud.tyk.io/)
 2. Navigate to **Deployments** > Select your Control Plane
 3. Save the configuration:
-   - **Connection String** (e.g., `xxx.cloud-ara.tyk.io:443`)
+   - **Connection String** (e.g., `your-mdcb.cloud-ara.tyk.io:443`)
    - **Organization ID**
    - **API Key**
    - **Group ID**
@@ -151,6 +151,9 @@ curl http://localhost:8080/your-api-path/get
 | Gateway | `http://localhost:8080` | Hybrid API Gateway          |
 | Redis   | `localhost:6379`        | Local cache/session storage |
 
+Host ports come from `.env` (`GATEWAY_PORT`, `REDIS_PORT`); change them there if something already
+listens on 8080 or 6379.
+
 **Control Plane (managed separately):**
 
 - Dashboard UI and API management are on your Tyk Cloud or Self-Managed control plane
@@ -163,7 +166,7 @@ curl http://localhost:8080/your-api-path/get
 
 | File             | Purpose                          |
 | ---------------- | -------------------------------- |
-| `.env`           | Component versions               |
+| `.env`           | Component versions, host ports   |
 | `confs/tyk.env`  | Gateway configuration (MDCB)     |
 | `confs/pump.env` | Pump configuration (hybrid pump) |
 
@@ -175,7 +178,7 @@ curl http://localhost:8080/your-api-path/get
 
 | Variable                               | Description                                      |
 | -------------------------------------- | ------------------------------------------------ |
-| `TYK_GW_SLAVEOPTIONS_CONNECTIONSTRING` | MDCB endpoint (e.g., `xxx.cloud-ara.tyk.io:443`) |
+| `TYK_GW_SLAVEOPTIONS_CONNECTIONSTRING` | MDCB endpoint (e.g., `your-mdcb.cloud-ara.tyk.io:443`) |
 | `TYK_GW_SLAVEOPTIONS_RPCKEY`           | Organization ID                                  |
 | `TYK_GW_SLAVEOPTIONS_APIKEY`           | Dashboard User API Key                           |
 | `TYK_GW_SLAVEOPTIONS_GROUPID`          | Data plane cluster identifier                    |
@@ -189,7 +192,7 @@ curl http://localhost:8080/your-api-path/get
 
 **Sensitive values in config files:**
 
-- **TYK_GW_SECRET** - Gateway API secret (should match control plane)
+- **TYK_GW_SECRET** - Gateway API secret (`x-tyk-authorization`). Local to this data plane
 - **TYK_GW_SLAVEOPTIONS_APIKEY** - Dashboard API key for MDCB auth
 - **TYK_PMP_PUMPS_HYBRID_META_APIKEY** - Same API key for pump
 
@@ -241,7 +244,13 @@ Grafana is at `http://localhost:3002` (folder **Tyk**). See [docker/observabilit
 
 ## Production Considerations
 
-- Check the env files under `confs/` and apply the PROD recommendations noted in comments
+The env files under `confs/` carry `# PROD:`, `# PROD/PERFORMANCE:` and `# SECURITY:` markers. To
+see what production would change:
+
+```bash
+python3 ../../tools/profiles.py \
+  audit confs/*.env --profile prod --profile performance --profile security
+```
 
 ---
 
@@ -276,6 +285,6 @@ PUMP_VERSION=v1.18.0
 
 - [Hybrid Gateway Documentation](https://tyk.io/docs/tyk-cloud/environments-deployments/hybrid-gateways)
 - [MDCB Configuration](https://tyk.io/docs/tyk-multi-data-centre/mdcb-configuration-options)
-- [Tyk Cloud Console](https://account.cloud-ara.tyk.io/)
+- [Tyk Cloud Console](https://account.cloud.tyk.io/)
 - [Release Notes](https://tyk.io/docs/developer-support/release-notes/overview)
 - [Support](https://support.tyk.io/hc/en-gb)

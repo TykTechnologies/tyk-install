@@ -13,7 +13,7 @@ next to the setting it applies to:
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
+    #   enabled: false
 
 This script is the only place that knows how to read those markers, so the
 guidance stays in the config files where engineers already maintain it instead of

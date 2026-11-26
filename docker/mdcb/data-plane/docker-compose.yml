@@ -3,7 +3,7 @@ services:
   # plane's Redis - surviving a control-plane outage is the whole point.
   tyk-redis-dp:
     restart: unless-stopped
-    image: redis:7.2.0
+    image: redis:7.2.17
     container_name: tyk-redis-dp
     ports:
       - "${REDIS_PORT:-6380}:6379"

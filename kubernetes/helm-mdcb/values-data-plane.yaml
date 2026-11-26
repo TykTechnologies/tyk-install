@@ -25,8 +25,10 @@
 global:
   remoteControlPlane:
     # The MDCB service of your control plane. Reachable from THIS cluster, which
-    # usually means a LoadBalancer or gRPC-capable Ingress rather than a
-    # ClusterIP - the two planes are typically in different clusters.
+    # usually means a LoadBalancer or another TCP pass-through rather than a
+    # ClusterIP - the two planes are typically in different clusters. The RPC
+    # link is plain TCP (TLS when useSSL is on), so an HTTP or gRPC ingress
+    # cannot carry it.
     connectionString: mdcb-svc-tyk-cp-tyk-mdcb.tyk.svc:9091
 
     # SECURITY: Prefer useSecretName over the plaintext values below.
@@ -35,10 +37,21 @@ global:
     # userApiKey: ""
     # groupID: ""
 
-    # PROD: Set to true once MDCB serves TLS, and keep sslInsecureSkipVerify false.
+    # PROD: Set to true once MDCB serves TLS (tyk-mdcb.mdcb.tls.useSSL in
+    # values-control-plane.yaml), and keep sslInsecureSkipVerify false.
     # RPC between planes usually crosses a network boundary.
     useSSL: false
     sslInsecureSkipVerify: true # PROD: Set to false and install the CA instead
+
+  # Must match the control plane's global.hashKeys (true by default), or keys
+  # created on the control plane will not resolve here.
+  hashKeys: true
+
+  mdcbSynchronizer:
+    # PROD: Enable so this plane keeps a keyspace copy and keeps serving through
+    # a control-plane outage. Pair with global.mdcbSynchronizer on the control plane.
+    enabled: false
+    keySpaceSyncInterval: 10 # Seconds between keyspace syncs
 
   secrets:
     # SECURITY: Change to a strong 32+ character string - this is the Gateway API credential
@@ -85,39 +98,27 @@ tyk-gateway:
     # PROD: Always set requests and limits, sized from measurement.
     resources: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or generate the overlay with
+    # `profiles.py apply --profile openshift` (see the README). Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
+    # # All three gateway blocks must be off: left enabled, the init container's
+    # # block falls back to UID 65532, which restricted-v2 rejects.
+    # initContainers:
+    #   setupDirectories:
+    #     securityContext:
+    #       enabled: false
 
     extraEnvs:
       - name: TYK_GW_LOGLEVEL
         value: "info" # PROD: Set to "error" to reduce log volume
-
-      # Must match the control plane's MDCB setting, or keys will not resolve.
-      - name: TYK_GW_HASHKEYS
-        value: "true"
-
-      # PROD: Enable so this plane keeps a keyspace copy and survives a
-      # control-plane outage. Pair with global.mdcbSynchronizer on the control plane.
-      # - name: TYK_GW_SLAVEOPTIONS_SYNCHRONISERENABLED
-      #   value: "true"
-      # - name: TYK_GW_SLAVEOPTIONS_KEYSPACESYNCINTERVAL
-      #   value: "10" # Seconds between keyspace syncs
 
       # - name: TYK_GW_SLAVEOPTIONS_RPCPOOLSIZE
       #   value: "5" # PROD/PERFORMANCE: Raise for a large gateway count in this plane
@@ -137,25 +138,28 @@ tyk-pump:
     replicaCount: 1
     resources: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or generate the overlay with
+    # `profiles.py apply --profile openshift` (see the README). Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
 
     extraEnvs:
       - name: TYK_PMP_LOGLEVEL
         value: "info" # PROD: Set to "error" to reduce log volume
+
+# -------------------------------------------------------------------------
+# Required for deploying on RedHat OpenShift
+# -------------------------------------------------------------------------
+# # `helm test` pod. Its default pins runAsUser 1000, which restricted-v2 rejects.
+# tests:
+#   securityContext:
+#     enabled: false
+#   containerSecurityContext:
+#     enabled: false

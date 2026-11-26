@@ -82,30 +82,32 @@ tyk-mdcb:
     replicaCount: 1
 
     service:
-      type: ClusterIP # PROD: Data planes are usually outside this cluster - expose via LoadBalancer or an Ingress that supports gRPC
+      type: ClusterIP # PROD: Data planes are usually outside this cluster - expose via a LoadBalancer or another TCP pass-through; the RPC link is plain TCP, not HTTP or gRPC
       port: 9091
+
+    # TLS on the RPC port, which the link to each data plane usually crosses a
+    # network boundary to reach. The chart mounts a kubernetes.io/tls secret;
+    # create it before installing:
+    #   kubectl create secret tls mdcb-tls-secret -n tyk --cert=mdcb.crt --key=mdcb.key
+    tls:
+      useSSL: false # PROD: Set to true, then set global.remoteControlPlane.useSSL on every data plane
+      secretName: mdcb-tls-secret
 
     # PROD: Always set requests and limits; size from the number of connected data planes.
     resources: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or generate the overlay with
+    # `profiles.py apply --profile openshift` (see the README). Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
-    # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    # # The MDCB chart names its pod-level block podSecurityContext.
+    # podSecurityContext:
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
 
 tyk-dashboard:
   dashboard:
@@ -118,24 +120,17 @@ tyk-dashboard:
     replicaCount: 1 # PROD: Two or more. The Dashboard serves operators, not request traffic, so it does not scale with RPS.
     resources: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or generate the overlay with
+    # `profiles.py apply --profile openshift` (see the README). Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
 
     extraEnvs:
       - name: TYK_DB_LOGLEVEL
@@ -154,24 +149,23 @@ tyk-gateway:
     replicaCount: 1 # PROD: Two or more behind a load balancer; gateways are stateless
     resources: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or generate the overlay with
+    # `profiles.py apply --profile openshift` (see the README). Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
+    # # All three gateway blocks must be off: left enabled, the init container's
+    # # block falls back to UID 65532, which restricted-v2 rejects.
+    # initContainers:
+    #   setupDirectories:
+    #     securityContext:
+    #       enabled: false
 
     extraEnvs:
       - name: TYK_GW_LOGLEVEL
@@ -194,24 +188,17 @@ tyk-pump:
     replicaCount: 1
     resources: {}
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or generate the overlay with
+    # `profiles.py apply --profile openshift` (see the README). Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
 
     extraEnvs:
       # MDCB forwards analytics from every data plane to this Pump.
@@ -219,3 +206,14 @@ tyk-pump:
         value: "info" # PROD: Set to "error" to reduce log volume
       # - name: TYK_PMP_PURGEDELAY
       #   value: "1" # PROD/PERFORMANCE: Lower for fresher data; if Pump falls behind, records expire in Redis and analytics under-report
+
+# -------------------------------------------------------------------------
+# Required for deploying on RedHat OpenShift
+# -------------------------------------------------------------------------
+# # Bootstrap job (global.components.bootstrap).
+# tyk-bootstrap:
+#   bootstrap:
+#     securityContext:
+#       enabled: false
+#     containerSecurityContext:
+#       enabled: false

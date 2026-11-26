@@ -92,13 +92,9 @@ GRAFANA_ADMIN_PASSWORD=admin
 # PROMETHEUS_REMOTE_WRITE_ENDPOINT=https://mimir.example.com/api/v1/push
 # PROMETHEUS_REMOTE_WRITE_HEADERS={"Authorization":"Bearer <token>"}
 
-# Image versions
-# OTEL_COLLECTOR_VERSION=0.162.0
-# PROMETHEUS_VERSION=v3.15.0
-# ALERTMANAGER_VERSION=v0.34.1
-# TEMPO_VERSION=3.1.0
-# LOKI_VERSION=3.7.8
-# GRAFANA_VERSION=13.2.4
+# Image versions: the pins are the defaults in docker-compose.yml. Override any of
+# OTEL_COLLECTOR_VERSION, PROMETHEUS_VERSION, ALERTMANAGER_VERSION, TEMPO_VERSION,
+# LOKI_VERSION or GRAFANA_VERSION here to change one.
 ```
 
 ## Production Considerations

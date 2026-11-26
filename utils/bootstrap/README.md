@@ -97,12 +97,25 @@ bash bootstrap.sh
 
 ### Docker Compose
 
-Creates `bootstrap-output/bootstrap-credentials.txt` with:
+The compose file bind-mounts `./bootstrap-output`, so the files land in
+`utils/bootstrap/bootstrap-output/` on the host. Creates `bootstrap-output/bootstrap-credentials.txt` with:
 
 - Dashboard login credentials
 - Portal admin credentials
 - API testing credentials
 - Dashboard API key and Org ID
+
+The container runs as root, so on Linux the files are owned by root: use `sudo rm -rf
+bootstrap-output/` to reset.
+
+Earlier versions wrote to a named Docker volume, `bootstrap-output`. If you ran one, copy its
+files out before rerunning, so the idempotency marker and credentials carry over, then remove the
+volume:
+
+```bash
+docker run --rm -v bootstrap-output:/src -v "$PWD/bootstrap-output:/dst" alpine cp -a /src/. /dst/
+docker volume rm bootstrap-output
+```
 
 ## ✅ Idempotency
 
@@ -138,6 +151,7 @@ docker compose --profile tools run --rm tyk-bootstrap
 
 - **Name**: "Demo Organization"
 - **CNAME**: Enabled
+- **Hybrid**: Enabled (`hybrid_enabled`), so an MDCB control plane accepts its data planes
 - **Event Options**: Redis hashed key events enabled
 
 ### Dashboard Admin User
@@ -208,23 +222,23 @@ docker compose --profile tools run --rm tyk-bootstrap
 
 ## 🔧 Customization
 
-Edit `bootstrap.sh` to customize:
+Edit `bootstrap.sh` to customize. Line numbers drift, so search for the values shown.
 
-**Lines 100-109**: Admin user credentials
+**Admin user credentials** (search for `admin@example.com` and `topsecret123`)
 
 ```bash
 "email_address": "admin@example.com"
 "new_password": "topsecret123"
 ```
 
-**Lines 253-310**: Test API configuration (OAS spec)
+**Test API configuration** (OAS spec; search for `httpbingo.org`)
 
 ```bash
 # Change target URL, endpoints, authentication
 "url": "https://httpbingo.org/"
 ```
 
-**Lines 358-380**: Policy settings
+**Policy settings** (search for `"rate": 1000`)
 
 ```bash
 "rate": 1000,         # requests
@@ -232,7 +246,7 @@ Edit `bootstrap.sh` to customize:
 "allowance": 1000     # quota
 ```
 
-**Lines 470-475**: Portal admin credentials
+**Portal admin credentials** (search for `portalpass123`)
 
 ```bash
 "username": "portal-admin@example.com"
@@ -253,7 +267,7 @@ docker compose logs tyk-dashboard
 # Test Dashboard health endpoint
 curl http://localhost:3000/hello
 
-# Increase wait time in bootstrap.sh (line 87)
+# Increase wait time in bootstrap.sh (max_attempts in wait_for_dashboard)
 local max_attempts=30  # Change to 60
 ```
 
@@ -285,7 +299,7 @@ docker compose --profile tools run --rm tyk-bootstrap
 **Credentials file not created:**
 
 ```bash
-# Check volume mount
+# Check the bind mount
 docker compose run --rm --entrypoint ls tyk-bootstrap -la /bootstrap-output
 
 # Check local directory
@@ -299,7 +313,7 @@ chmod -R 755 bootstrap-output/
 
 ```bash
 # Check Portal is running
-curl http://localhost:3001/hello
+curl http://localhost:3001/ready
 
 # Portal is optional - Dashboard and API work without it
 # Skip portal errors if you don't need the Developer Portal

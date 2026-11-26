@@ -33,6 +33,11 @@ Self-Managed control plane already gives you that, with far fewer moving parts. 
 The data plane's Redis is its own and must not be shared with the control plane — keeping local
 state is exactly what lets it survive a control-plane outage.
 
+The control-plane gateway is required, although it serves no API traffic for the data planes: the
+Dashboard calls it to create keys and upload certificates, and neither works while it is down.
+Keep it off the public network, and never tag (shard) it, because it belongs to the whole
+installation. See the [MDCB control plane components](https://tyk.io/docs/api-management/mdcb#control-plane).
+
 ## Licences
 
 Two are required, and they are separate:
@@ -72,14 +77,14 @@ wrong, or expired. That message looks identical whether the value is absent or i
 
 The data plane needs three values from the control-plane Dashboard at `http://localhost:3000`:
 
-| Value | Where | Goes into |
-| --- | --- | --- |
-| Organisation ID | Dashboard → your organisation | `TYK_GW_SLAVEOPTIONS_RPCKEY` |
-| Dashboard user API key | Dashboard → Users → your user | `TYK_GW_SLAVEOPTIONS_APIKEY` |
-| Group ID | you choose it — a name for this data-plane cluster | `TYK_GW_SLAVEOPTIONS_GROUPID` |
+| Value | Where | Goes into `data-plane/.env` | Read by |
+| --- | --- | --- | --- |
+| Organisation ID | Dashboard → your organisation | `MDCB_ORG_ID` | `TYK_GW_SLAVEOPTIONS_RPCKEY` |
+| Dashboard user API key | Dashboard → Users → your user | `MDCB_API_KEY` | `TYK_GW_SLAVEOPTIONS_APIKEY`, `TYK_PMP_PUMPS_HYBRID_META_APIKEY` |
+| Group ID | you choose it — a name for this data-plane cluster | `MDCB_GROUP_ID` | `TYK_GW_SLAVEOPTIONS_GROUPID` |
 
-All three must be right. One wrong value fails the handshake with `access denied`, which is
-indistinguishable in the logs from a licence problem.
+All three must be right. One wrong value fails the handshake with `RPC Login incorrect`; see
+[Troubleshooting](#troubleshooting) to tell it apart from the other causes of the same message.
 
 **The organisation must be hybrid-enabled.** MDCB refuses the RPC login for an
 organisation that is not, and the data plane reports it as `RPC Login incorrect` — the same
@@ -91,20 +96,31 @@ curl -s -X POST http://localhost:3000/admin/organisations \
   -d '{"owner_name":"Example","cname_enabled":true,"hybrid_enabled":true}'
 ```
 
-Bootstrap the control plane first if it has no organisation yet — see
-[`../../utils/bootstrap/`](../../utils/bootstrap/).
+Bootstrap the control plane first if it has no organisation yet. The bootstrap utility's Compose
+service joins the Self-Managed `tyk` network, so for this control plane run its script from the
+host instead (["Standalone Script"](../../utils/bootstrap/README.md#standalone-script)):
+
+```bash
+cd ../../utils/bootstrap
+export DASHBOARD_URL=http://localhost:3000 ADMIN_SECRET="$ADMIN_SECRET"
+export TYK_LICENSE_KEY=...   # the Dashboard licence from control-plane/.env; never commit it
+bash bootstrap.sh
+```
+
+This control plane runs no Developer Portal, so the script waits about a minute for one, logs
+"Portal not available, skipping" and carries on.
 
 ## 3. Start a data plane
 
 ```bash
 cd ../data-plane
 cp .env.example .env
-# edit confs/tyk.env: set RPCKEY, APIKEY, GROUPID, and CONNECTIONSTRING
+# edit .env: set MDCB_CONNECTIONSTRING, MDCB_ORG_ID, MDCB_API_KEY and MDCB_GROUP_ID
 docker compose up -d
 ```
 
-`CONNECTIONSTRING` defaults to `host.docker.internal:9091`, which reaches a control plane on the
-same machine. For a real remote control plane, set its hostname and remove the `extra_hosts`
+`MDCB_CONNECTIONSTRING` defaults to `host.docker.internal:9091`, which reaches a control plane on
+the same machine. The data-plane Gateway and Pump both read it. For a real remote control plane, set its hostname and remove the `extra_hosts`
 entry from `docker-compose.yml`.
 
 The data-plane gateway is on **8081** and its Redis on **6380**, so it does not collide with a
@@ -112,10 +128,11 @@ control plane on the same host.
 
 ## 4. Verify the bridge
 
-Verified on Docker Desktop / OrbStack in August 2026 with MDCB v2.12.0 and Tyk 5.14.0 (the pins
-have since moved to the current release): control plane healthy,
-data plane logged in over RPC, an API created on the control plane propagated to the data plane,
-and a request served through the data-plane gateway.
+A working bridge has the data plane logged in over RPC, APIs created on the control plane
+propagated to the data plane, and requests served through the data-plane gateway. With the
+settings from [Before production](#before-production), the data plane logs in over RPC with TLS
+1.3 and certificate verification on, and with the synchroniser enabled a hashed key reaches the
+data plane's Redis before its first use.
 
 ```bash
 docker logs tyk-gateway-dp | grep -i rpc
@@ -136,6 +153,9 @@ tagging problem, not a connectivity one.
 | MDCB logs `relation "tyk_organisations" does not exist` | `TYK_MDCB_ANALYTICSCONFIG_CONNECTIONSTRING` points at the analytics database (`tyk_analytics`) instead of the Dashboard's **main** database (`tyk_dashboard`). Organisations live in the main one. Must match `TYK_DB_STORAGE_MAIN_CONNECTIONSTRING` in the control plane's `confs/tyk_analytics.env`. |
 | MDCB logs `no driver specified for mongo` | `TYK_MDCB_ANALYTICSCONFIG_TYPE` is unset, so it defaulted to `mongo` and ignored every PostgreSQL setting. |
 | `certificate signed by unknown authority` | TLS to MDCB. For development set `TYK_GW_SLAVEOPTIONS_SSLINSECURESKIPVERIFY=true`; in production install the CA instead. |
+| Data plane logs `RPC Login failed` (`rpc is either down`) while MDCB logs `tls: bad certificate` | The data plane does not trust the certificate MDCB serves on 9091. Install the issuing CA on the data plane. |
+| Dashboard returns 403 creating a key, or 404 uploading a certificate, with `lookup tyk-gateway` in the message | The control-plane gateway is down. The Dashboard creates keys and certificates through it, so it is required. |
+| Synchroniser on, but keys never reach the data plane's Redis; MDCB logs `isHashedKeys: false` | `TYK_MDCB_SYNCWORKER_HASHKEYS` is unset while `TYK_MDCB_HASHKEYS=true`. Set both to `true`. |
 | Connects, but no APIs appear | Group ID mismatch, or APIs not tagged for this data plane. |
 | Keys work on one plane, not the other | `TYK_MDCB_HASHKEYS` and the gateways' `TYK_GW_HASHKEYS` disagree. They must match. |
 | Port 5432 already allocated | A local PostgreSQL. Change `POSTGRES_PORT` in `.env`. |
@@ -155,8 +175,14 @@ Specific to MDCB, beyond the usual:
 - **Enable the synchroniser.** `TYK_MDCB_SYNCWORKER_ENABLED=true` on the control plane and
   `TYK_GW_SLAVEOPTIONS_SYNCHRONISERENABLED=true` on each data plane. Without it, data planes do
   not keep a keyspace copy — and surviving a control-plane outage is the reason you chose MDCB.
-- **TLS on the RPC link.** It crosses a network boundary between sites. Set `TYK_MDCB_USESSL=true`,
-  and set `SSLINSECURESKIPVERIFY=false` on the data planes.
+  With hashed keys (the default here), also set `TYK_MDCB_SYNCWORKER_HASHKEYS=true` to match
+  `TYK_MDCB_HASHKEYS`; otherwise the synchroniser does not copy keys.
+- **TLS on the RPC link.** It crosses a network boundary between sites. On the control plane set
+  `TYK_MDCB_SERVEROPTIONS_USESSL=true` with `TYK_MDCB_SERVEROPTIONS_CERTIFICATE_CERTFILE` and
+  `TYK_MDCB_SERVEROPTIONS_CERTIFICATE_KEYFILE`, and mount the files into the MDCB container. On
+  each data plane set `TYK_GW_SLAVEOPTIONS_USESSL=true` and `TYK_GW_SLAVEOPTIONS_SSLINSECURESKIPVERIFY=false`,
+  and the same pair for the data-plane Pump (`TYK_PMP_PUMPS_HYBRID_META_USESSL=true`,
+  `TYK_PMP_PUMPS_HYBRID_META_SSLINSECURESKIPVERIFY=false`).
 - **Run at least two MDCB instances.** Every data plane depends on MDCB to pick up configuration
   changes.
 - The committed Postgres password and Gateway secrets are development defaults.
@@ -171,6 +197,8 @@ cd ../control-plane && docker compose down -v
 ## Reference
 
 - <https://tyk.io/docs/tyk-multi-data-centre>
-- <https://tyk.io/docs/tyk-mdcb-api.mdx>
+- MDCB configuration options (every `TYK_MDCB_*` name used here):
+  <https://tyk.io/docs/tyk-multi-data-centre/mdcb-configuration-options>
+- <https://tyk.io/docs/tyk-mdcb-api>
 - Kubernetes equivalent: [`../../kubernetes/helm-mdcb/`](../../kubernetes/helm-mdcb/)
 - Tyk Cloud control plane instead of self-hosted: [`../hybrid/`](../hybrid/)

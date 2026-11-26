@@ -63,7 +63,7 @@ jobs:
           bash scripts/add-oas-api.sh "$RUNNER_TEMP/orders.oas.json"
           test -f apps/orders.json && test -f apps/orders-oas.json
           docker compose restart tyk-gateway
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -sf http://localhost:8080/hello > /dev/null && break
             sleep 2
           done
@@ -71,10 +71,11 @@ jobs:
           echo "orders without a key: $code"
           [ "$code" = "401" ]
 
-      - name: No container exited
+      - name: No container exited or unhealthy
         run: |
           docker compose ps
-          if docker compose ps --format json | grep -q '"State":"exited"'; then
+          if docker compose ps -a --format json | grep -qE '"State":"(exited|restarting|dead)"|"Health":"unhealthy"'; then
+            echo "A container exited or reports an unhealthy healthcheck."
             docker compose logs
             exit 1
           fi

@@ -31,7 +31,9 @@ kubectl create namespace tyk
 kubectl config current-context      # confirm the target before installing
 ```
 
-Dependencies first:
+Dependencies first. The `bitnamilegacy` Redis and PostgreSQL images receive no further updates and
+are for evaluation only; in production use a maintained Redis and PostgreSQL (a managed service or a
+maintained chart).
 
 ```bash
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
@@ -73,8 +75,9 @@ kubectl get svc -n tyk | grep mdcb
 
 ## 2. Expose MDCB to the data planes
 
-Data planes are usually in a different cluster, so a `ClusterIP` will not reach them. MDCB speaks
-gRPC on 9091 — an ingress in front of it must support gRPC.
+Data planes are usually in a different cluster, so a `ClusterIP` will not reach them. MDCB's RPC
+link on 9091 is plain TCP (TLS once `tyk-mdcb.mdcb.tls.useSSL` is on), not HTTP or gRPC, so expose
+it with a `LoadBalancer` Service or another TCP pass-through rather than an HTTP or gRPC ingress.
 
 ```bash
 kubectl patch svc mdcb-svc-tyk-cp-tyk-mdcb -n tyk -p '{"spec":{"type":"LoadBalancer"}}'
@@ -100,7 +103,9 @@ kubectl create secret generic tyk-data-plane-conf -n tyk-dp \
 kubectl get secret tyk-data-plane-conf -n tyk-dp -o yaml   # confirm all four keys exist
 ```
 
-The data plane needs its **own** Redis — not the control plane's:
+The data plane needs its **own** Redis — not the control plane's. The `bitnamilegacy` Redis image
+receives no further updates and is for evaluation only; in production use a maintained Redis (a
+managed service or a maintained chart).
 
 ```bash
 helm install tyk-redis oci://registry-1.docker.io/bitnamicharts/redis \
@@ -140,8 +145,11 @@ python3 $P audit values-control-plane.yaml --profile prod --profile security
 python3 $P audit values-data-plane.yaml    --profile prod --profile security
 
 # OpenShift is the one profile safe to generate as an overlay
-python3 $P apply values-data-plane.yaml --profile openshift -o dp-openshift.yaml
-helm template check tyk-helm/tyk-data-plane -f values-data-plane.yaml -f dp-openshift.yaml
+mkdir -p ../../.tyk-deploy
+python3 $P apply values-control-plane.yaml --profile openshift -o ../../.tyk-deploy/cp-openshift.yaml
+python3 $P apply values-data-plane.yaml    --profile openshift -o ../../.tyk-deploy/dp-openshift.yaml
+helm template check tyk-helm/tyk-control-plane -f values-control-plane.yaml -f ../../.tyk-deploy/cp-openshift.yaml
+helm template check tyk-helm/tyk-data-plane    -f values-data-plane.yaml    -f ../../.tyk-deploy/dp-openshift.yaml
 ```
 
 `apply` refuses prod/performance/security: a commented-out value is often an illustrative default
@@ -159,8 +167,8 @@ oc expose svc gateway-svc-tyk-dp-tyk-gateway -n tyk-dp --port=8080
 oc get routes -n tyk
 ```
 
-Routes are HTTP; MDCB's RPC link needs a gRPC-capable path, so expose MDCB with a LoadBalancer or
-a gRPC-aware ingress rather than a plain Route.
+Routes are HTTP, and MDCB's RPC link is plain TCP, so expose MDCB with a `LoadBalancer` Service
+rather than a plain Route.
 
 > On OpenShift Local (CRC), prefer `kubectl port-forward` — it avoids DNS configuration.
 
@@ -168,11 +176,14 @@ a gRPC-aware ingress rather than a plain Route.
 
 Beyond the markers:
 
-- **Enable the synchroniser** — `global.mdcbSynchronizer.enabled: true` on the control plane and
-  the matching gateway setting on each data plane. Without it, data planes hold no keyspace copy,
-  and surviving a control-plane outage is why you chose MDCB.
-- **TLS on the RPC link**, which crosses a network boundary between sites. Set `useSSL: true` and
-  `sslInsecureSkipVerify: false`.
+- **Enable the synchroniser** — `global.mdcbSynchronizer.enabled: true` in both values files.
+  Without it, data planes hold no keyspace copy, and surviving a control-plane outage is why you
+  chose MDCB. Keep `global.hashKeys` the same on both planes.
+- **TLS on the RPC link**, which crosses a network boundary between sites. Both ends need it: on the
+  control plane, create the `mdcb-tls-secret` TLS secret and set `tyk-mdcb.mdcb.tls.useSSL: true`;
+  on each data plane, set `global.remoteControlPlane.useSSL: true` and
+  `sslInsecureSkipVerify: false`, and trust the CA that signed the MDCB certificate. The two ends
+  must match, or the handshake fails.
 - **Two or more MDCB replicas**, and two or more gateways per data plane.
 - `APISecret: CHANGEME` and the Postgres password above are placeholders.
 - No resource requests or limits are set in either file.

@@ -16,12 +16,12 @@ to a row here, say so rather than improvising a path.
 | Edition | Directory | Components | Licence | Status |
 | --- | --- | --- | --- | --- |
 | OSS | `docker/oss/` | Gateway (`tykio/tyk-gateway`), Redis | none | `bundled-tested` |
-| Self-Managed quickstart | `docker/getting-started/` | Gateway, Dashboard, Redis, Postgres, bootstrap. **Starts with `./start.sh`, not `docker compose up` — see the note below** | Dashboard, in `docker/self-managed/.env` | `bundled-tested` |
+| Self-Managed quickstart | `docker/getting-started/` | Gateway, Dashboard, Portal, Pump, Redis, Postgres, bootstrap. **Starts with `./start.sh`, not `docker compose up` — see the note below** | Dashboard and Portal, in `docker/self-managed/.env` | `bundled-tested` |
 | Self-Managed full | `docker/self-managed/` | Gateway, Dashboard, Pump, Portal, Redis, Postgres | Dashboard, Portal | `bundled-tested` |
 | Hybrid data plane | `docker/hybrid/` | Gateway, Pump, Redis → Tyk Cloud MDCB | Tyk Cloud account | `bundled` |
 | MDCB control plane | `docker/mdcb/control-plane/` | Dashboard, MDCB, Gateway, Pump, Redis, Postgres | Dashboard, MDCB | `bundled-tested` |
 | MDCB data plane | `docker/mdcb/data-plane/` | Gateway (RPC), Pump, Redis → self-hosted MDCB | inherited via MDCB | `bundled-tested` |
-| AI Studio | `docker/ai-studio/` | AI Studio, Microgateway, analytics pulse, Postgres | AI Studio | `bundled` |
+| AI Studio | `docker/ai-studio/` | AI Studio, Microgateway, analytics pulse, Postgres | none for Community Edition, AI Studio for Enterprise | `bundled` |
 
 `docker/getting-started/` is not a standalone stack: its `docker-compose.yml` defines only an
 `httpbin` service and is layered over `docker/self-managed/docker-compose.yml` by `start.sh`.
@@ -40,7 +40,7 @@ project directory from there — so the licence goes in **`docker/self-managed/.
 | MDCB control plane | `kubernetes/helm-mdcb/values-control-plane.yaml` | `tyk-helm/tyk-control-plane` | Dashboard, MDCB | `bundled` |
 | MDCB data plane | `kubernetes/helm-mdcb/values-data-plane.yaml` | `tyk-helm/tyk-data-plane` | inherited via MDCB | `bundled` |
 | Operator only | `kubernetes/standalone-operator/` | `tyk-helm/tyk-operator` | Operator | `bundled` |
-| AI Studio | `kubernetes/helm-ai-studio/` | `tyk-helm/tyk-ai-studio` plus optional `values-*.yaml` add-ons | none for Community Edition, AI Studio for Enterprise | `bundled` |
+| AI Studio | `kubernetes/helm-ai-studio/` | `midsommar`, cloned from `TykTechnologies/ai-studio` (`helm/`) at the release tag, not from a Helm repository; plus optional `values-*.yaml` add-ons | none for Community Edition, AI Studio for Enterprise | `bundled` |
 
 **`kubernetes/helm-self-managed/values.yaml` enables the Tyk Operator** (`operator: true`). As
 shipped, that row therefore needs a **third licence** the Licence column above would not otherwise
@@ -63,9 +63,9 @@ plane, data plane, Portal, or Operator — `baremetal/install.sh` accepts exactl
 `gateway`, `dashboard`, `pump`. So "MDCB on bare metal" and "hybrid on bare metal" are combinations
 with no row. Say so rather than assembling one.
 
-Bare metal needs a Linux host with systemd. The gateway path is verified end to end in an
-Ubuntu 26.04 VM; dashboard and pump on bare metal are not. `--dry-run` works from any host,
-including macOS, for reviewing the plan.
+Bare metal needs a Linux host with systemd; the packages cover `ubuntu noble`/`jammy`,
+`debian bookworm` and `el 8`/`9`. `--dry-run` works from any host, including macOS, for reviewing
+the plan.
 
 Note the packages are not published for every distribution release. Pin the upstream codename with
 `--os`/`--dist` when yours is newer than Tyk's builds.
@@ -137,7 +137,7 @@ it fits otherwise. Work through these in order and stop at the first that decide
    - MDCB is for when sites must be **independent**: separate regions or data centres, data planes
      that must keep serving through a control-plane outage, or traffic that must stay in a
      jurisdiction. Ask *why* there are two sites before deciding.
-   - If MDCB is right, read the MDCB multi-site guidance in the `tyk-deployment-planner` skill
+   - If MDCB is right, read the MDCB multi-site guidance in the `tyk-deployment` skill
      (tyk-skills) or <https://tyk.io/docs/api-management/mdcb> before planning — MDCB does not by
      itself give two symmetric sites, and the difference matters.
 5. **RedHat OpenShift?** Pick the Helm row, then layer its committed `values-openshift.yaml`

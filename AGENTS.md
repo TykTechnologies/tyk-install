@@ -6,10 +6,9 @@ Help someone deploy Tyk into their own environment, prove it works, and harden i
 using the deployment configurations in this repository.
 
 This repository holds the deployment files, the tools in `tools/` and the guides in `docs/`. The
-agent skills that drive a deployment (`tyk-deployment-planner`, `tyk-deployment-runner` and
-`tyk-production-readiness`) are in the
+agent skill that drives a deployment, `tyk-deployment` (plan, run and review phases), is in the
 [tyk-skills](https://github.com/TykTechnologies/tyk-skills) plugin, with the other Tyk skills.
-Without them, follow this contract, `docs/topology-matrix.md` and the tools directly.
+Without it, follow this contract, `docs/topology-matrix.md` and the tools directly.
 
 | Path | Use it for |
 | --- | --- |
@@ -89,9 +88,10 @@ findings and hand back edits for a human to apply to a copy of the file.
 
 ## Versions
 
-Component versions are pinned in each `.env.example` and in the Helm `values*.yaml` image tags,
-and a workflow in the Tyk docs repository raises a pull request here on every release to keep
-them at the latest stable tag. Read the pin from the file and never quote a version from memory.
+Component versions are pinned in each `.env.example` and in the Helm `values*.yaml` image tags.
+Tyk component image pins in `.env.example` and the Helm `values*.yaml` are raised by a workflow
+in the Tyk docs repository; AI Studio on Helm, tyk-sync, third-party images and README examples
+are updated by hand. Read the pin from the file and never quote a version from memory.
 Use the pinned versions unless the user asks otherwise, never mix a Gateway and Dashboard from
 different minor releases, and record the versions actually deployed in any summary you produce.
 
