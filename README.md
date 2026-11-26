@@ -88,7 +88,7 @@ Self-Managed and Hybrid both run on Red Hat OpenShift from tyk-charts 5.4.0 by l
 
 | Deployment  | Description                                                                                     | Guide                  |
 | ----------- | ----------------------------------------------------------------------------------------------- | ---------------------- |
-| **Gateway** | rpm/deb packages with systemd, no containers. Also installs Dashboard and Pump | [README](./baremetal/) |
+| **All packaged components** | rpm/deb packages with systemd, no containers: Gateway, Dashboard, Pump, MDCB, Developer Portal and Tyk Sync | [README](./baremetal/) |
 
 ### Observability (Optional)
 

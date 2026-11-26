@@ -58,12 +58,37 @@ file still contains inline comments. Never copy `confs/*.env` to `/etc/default/`
 | | |
 | --- | --- |
 | OS | RHEL / Rocky / Alma 8+, or Ubuntu / Debian. systemd required. |
-| Redis | required by the Gateway. Not installed by these scripts. |
-| PostgreSQL | required by the Dashboard and Pump. Not installed by these scripts. |
-| Licences | `TYK_LICENSE_KEY` for the Dashboard. The Gateway alone needs none. |
+| Redis | required by the Gateway and MDCB. Not installed by these scripts. |
+| PostgreSQL | required by the Dashboard, Pump, MDCB and Developer Portal. Not installed by these scripts. |
+| Licences | `TYK_LICENSE_KEY` (Dashboard), `TYK_MDCB_LICENSE` (MDCB), `TYK_PORTAL_LICENSE` (Developer Portal). The Gateway, Pump and Tyk Sync need none. |
 
 Packages come from Tyk's own repositories on [packagecloud.io](https://packagecloud.io/tyk), one
-per component: `tyk/tyk-gateway`, `tyk/tyk-dashboard`, `tyk/tyk-pump`.
+per component:
+
+| `--components` | Repository | Package | Service | Config (`confs/`) | Port |
+| --- | --- | --- | --- | --- | --- |
+| `gateway` | `tyk/tyk-gateway` | `tyk-gateway` | `tyk-gateway` | `gateway.env` | 8080 |
+| `dashboard` | `tyk/tyk-dashboard` | `tyk-dashboard` | `tyk-dashboard` | `dashboard.env` | 3000 |
+| `pump` | `tyk/tyk-pump` | `tyk-pump` | `tyk-pump` | `pump.env` | - |
+| `mdcb` | `tyk/tyk-mdcb-stable` | `tyk-sink` | `tyk-sink` | `mdcb.env` | 9091 (RPC), 8181 (`/health`) |
+| `portal` | `tyk/portal` | `portal` | `portal` | `portal.env` | 3001 |
+| `sync` | `tyk/tyk-sync` | `tyk-sync` | none: a command-line tool in `/opt/tyk-sync` | - | - |
+
+Each config is written to `/etc/default/<service>`, which the packaged unit reads. The ports in the
+table are the ones the `confs/` files set, chosen so every component can share one host.
+
+- **MDCB** here is the control-plane side: install it with the Dashboard, Gateway and Pump. A
+  data-plane Gateway on bare metal needs the `TYK_GW_SLAVEOPTIONS_*` settings from
+  [`../docker/mdcb/data-plane/confs/tyk.env`](../docker/mdcb/data-plane/confs/tyk.env) in place of
+  the Dashboard ones in `confs/gateway.env`.
+- **Single sign-on** uses the Identity Broker built into the Dashboard and the Developer Portal
+  (`TYK_DB_TIB_ENABLED` and `PORTAL_TIB_ENABLED` in their configs), so it has no package of its own
+  here ([Tyk Identity Broker](https://tyk.io/docs/tyk-identity-broker/)).
+- **AI Studio** is not installed here yet: this repository runs AI Studio 2.3, which is not
+  published as packages. Use [`../docker/ai-studio/`](../docker/ai-studio/) or
+  [`../kubernetes/helm-ai-studio/`](../kubernetes/helm-ai-studio/).
+
+Licences, which the configs read as `${VAR}`, come from `--env-file`. `install.sh` stops if one is missing.
 
 ## Install
 
@@ -78,6 +103,17 @@ Then, on the Linux host:
 ```bash
 sudo ./install.sh --components gateway,dashboard,pump
 ```
+
+The other components install the same way, alone or together:
+
+```bash
+sudo ./install.sh --components gateway,dashboard,pump,mdcb --env-file /root/tyk-licences.env
+sudo ./install.sh --components portal --env-file /root/tyk-licences.env
+sudo ./install.sh --components sync
+```
+
+`--version` applies to every component in one run, and components have their own version numbers
+(Pump, MDCB, Portal and Sync do not follow the Gateway), so pin one component per run.
 
 To pin a version rather than taking the repository's latest:
 
@@ -204,12 +240,13 @@ the admin API calls there apply unchanged, with `TYK_DB_ADMINSECRET` from
 ```bash
 ./verify.sh --components gateway,dashboard,pump
 ./verify.sh --components gateway --route /your-listen-path/
+./verify.sh --components mdcb,portal,sync
 ```
 
 Checks unit state, whether each unit is enabled at boot, that config exists at
-`/etc/default/tyk-<component>` and contains no inline comments, that `/hello` reports
-`status=pass` rather than merely returning 200, and Redis and PostgreSQL reachability. Exits
-non-zero on failure.
+`/etc/default/<service>` and contains no inline comments, that the Gateway's and Dashboard's
+`/hello` report `status=pass` rather than merely returning 200, MDCB `/health` and Portal `/ready`,
+and Redis and PostgreSQL reachability. Exits non-zero on failure.
 
 Pass `--route` to prove a request actually reaches an upstream. Units being active is not evidence
 that traffic flows.
@@ -232,10 +269,11 @@ Check the release notes first: <https://tyk.io/docs/developer-support/release-no
 ## Uninstall
 
 ```bash
+# Name the services and packages you installed (see the table under Prerequisites)
 sudo systemctl disable --now tyk-gateway tyk-dashboard tyk-pump
 sudo apt-get remove tyk-gateway tyk-dashboard tyk-pump    # or: yum remove
 sudo rm -f /etc/default/tyk-gateway /etc/default/tyk-dashboard /etc/default/tyk-pump
-sudo rm -rf /etc/systemd/system/tyk-*.service.d
+sudo rm -rf /etc/systemd/system/tyk-*.service.d /etc/systemd/system/portal.service.d
 sudo systemctl daemon-reload
 ```
 

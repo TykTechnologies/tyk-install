@@ -10,15 +10,25 @@ set -uo pipefail
 COMPONENTS=gateway
 GATEWAY=http://localhost:8080
 DASHBOARD=http://localhost:3000
+MDCB=http://localhost:8181
+PORTAL=http://localhost:3001
 ROUTE=
+
+# The systemd service per component, as install.sh installs it.
+svc_of() {
+  case "$1" in mdcb) printf 'tyk-sink' ;; portal) printf 'portal' ;; sync) printf '' ;; *) printf 'tyk-%s' "$1" ;; esac
+}
 
 usage() {
   cat <<'EOF'
 Usage: ./verify.sh [--components gateway,dashboard,pump] [options]
 
-  --components  Comma-separated: gateway, dashboard, pump. Default: gateway.
+  --components  Comma-separated: gateway, dashboard, pump, mdcb, portal, sync.
+                Default: gateway.
   --gateway     Gateway base URL   (default http://localhost:8080)
   --dashboard   Dashboard base URL (default http://localhost:3000)
+  --mdcb        MDCB health URL    (default http://localhost:8181)
+  --portal      Portal base URL    (default http://localhost:3001)
   --route       Path proving a request reaches an upstream, e.g. /httpbin/get
 EOF
 }
@@ -28,6 +38,8 @@ while [[ $# -gt 0 ]]; do
     --components) COMPONENTS=${2:?}; shift 2 ;;
     --gateway)    GATEWAY=${2:?}; shift 2 ;;
     --dashboard)  DASHBOARD=${2:?}; shift 2 ;;
+    --mdcb)       MDCB=${2:?}; shift 2 ;;
+    --portal)     PORTAL=${2:?}; shift 2 ;;
     --route)      ROUTE=${2:?}; shift 2 ;;
     -h|--help)    usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
@@ -47,7 +59,13 @@ if ! command -v systemctl >/dev/null 2>&1; then
 fi
 
 check_unit() {
-  local unit=tyk-$1
+  local unit
+  unit=$(svc_of "$1")
+  if [[ -z "$unit" ]]; then
+    if [[ -x "/opt/tyk-$1/tyk-$1" ]]; then pass "tyk-$1 installed (command-line tool)"
+    else fail "tyk-$1 not installed" "run install.sh --components $1"; fi
+    return
+  fi
   if ! systemctl list-unit-files "${unit}.service" >/dev/null 2>&1; then
     fail "$unit not installed" "run install.sh --components $1"; return
   fi
@@ -81,6 +99,14 @@ check_unit() {
 
 status_of() { curl -s -o /dev/null -w '%{http_code}' "$1" 2>/dev/null; }
 
+# A plain HTTP 200 check, for components without a /hello status document.
+check_200() {
+  local name=$1 url=$2 code
+  code=$(status_of "$url")
+  if [[ "$code" == "200" ]]; then pass "$name answers $url"
+  else fail "$name $url returned $code" "the unit may be active but not serving yet"; fi
+}
+
 check_endpoint() {
   local name=$1 url=$2 code body overall
   code=$(status_of "$url/hello")
@@ -104,7 +130,7 @@ check_redis() {
     if [[ "$(redis-cli ping 2>/dev/null)" == PONG ]]; then
       pass "redis responding"
     else
-      fail "redis not responding" "the gateway cannot store keys, quotas, or rate limits without it"
+      fail "redis not responding" "the gateway and MDCB keep keys, quotas and rate limits there"
     fi
   else
     skip "redis" "redis-cli not installed; check your Redis host manually"
@@ -116,7 +142,7 @@ check_postgres() {
     if pg_isready >/dev/null 2>&1; then
       pass "postgres accepting connections"
     else
-      fail "postgres not ready" "the dashboard stores API definitions and users here"
+      fail "postgres not ready" "the dashboard, MDCB and portal store their data there"
     fi
   else
     skip "postgres" "pg_isready not installed; check your PostgreSQL host manually"
@@ -143,7 +169,9 @@ for c in "${SELECTED[@]}"; do
   case "$c" in
     gateway)   check_endpoint gateway "$GATEWAY"; check_redis ;;
     dashboard) check_endpoint dashboard "$DASHBOARD"; check_postgres ;;
-    pump)      : ;;
+    mdcb)      check_200 mdcb "$MDCB/health"; check_redis; check_postgres ;;
+    portal)    check_200 portal "$PORTAL/ready"; check_postgres ;;
+    pump|sync) : ;;
   esac
 done
 check_proxy

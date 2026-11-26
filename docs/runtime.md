@@ -139,6 +139,7 @@ rather than assuming, with `check_rpc` in `tools/verify_deployment.sh`.
 
 ```bash
 sudo ./baremetal/install.sh --components gateway,dashboard,pump
+# also: mdcb, portal, sync (baremetal/README.md lists each)
 ./baremetal/install.sh --dry-run --components gateway   # prints the plan, changes nothing
 sudo systemctl status tyk-gateway
 sudo journalctl -u tyk-gateway -f
