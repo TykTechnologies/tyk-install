@@ -1,14 +1,40 @@
 # Production settings overlay (reference architecture). Layer on top of values.yaml:
-#   --values values.yaml --values values-production.yaml --post-renderer ./post-render.sh
-# (Helm 4: --post-renderer tyk-ai-studio, after helm plugin install .)
+#   --values values.yaml --values values-production.yaml
 #
 # Requires (see README "Production Settings"):
 #   - Secret tyk-ai-studio-grpc-tls (tls.crt / tls.key) for the gRPC control connection
-#   - ConfigMap tyk-ai-studio-extra from studio-extra.env (GRPC_TLS_*_PATH, CORS, plugins)
-#   - Secret tyk-ai-studio-extra with CSRF_KEY and METRICS_AUTH_TOKEN
+#   - Secret tyk-ai-studio-extra with METRICS_AUTH_TOKEN
+#   - --set config.csrfKey=$CSRF_KEY on the install command (from .env)
+# With a private or self-signed CA for the gRPC certificate, also add
+# --post-renderer ./post-render.sh, which gives the Edge Gateway the CA file.
 
 config:
   grpcTlsInsecure: "false" # AI Studio serves gRPC with TLS
+
+metrics:
+  # /metrics needs the bearer token; the ServiceMonitor (if enabled) sends it too.
+  allowUnauthenticated: false
+  bearerTokenSecret:
+    name: tyk-ai-studio-extra
+    key: METRICS_AUTH_TOKEN
+
+extraEnv:
+  - name: CORS_ALLOWED_ORIGINS # PROD: the AI Studio URL users open
+    value: https://studio.example.com
+  - name: GRPC_TLS_CERT_PATH
+    value: /opt/tyk-ai-studio/certs/grpc/tls.crt
+  - name: GRPC_TLS_KEY_PATH
+    value: /opt/tyk-ai-studio/certs/grpc/tls.key
+
+extraVolumes:
+  - name: grpc-tls
+    secret:
+      secretName: tyk-ai-studio-grpc-tls
+
+extraVolumeMounts:
+  - name: grpc-tls
+    mountPath: /opt/tyk-ai-studio/certs/grpc
+    readOnly: true
 
 microgateway:
   config:
@@ -27,7 +53,9 @@ microgateway:
         secretKeyRef:
           name: tyk-ai-studio-extra
           key: METRICS_AUTH_TOKEN
-    - name: EDGE_TLS_CA_PATH
-      value: /opt/tyk-microgateway/certs/grpc/tls.crt
     - name: EDGE_TLS_SERVER_NAME
       value: tyk-ai-studio
+    # With a private or self-signed CA (post-render.sh mounts it here). Remove it when
+    # the gRPC certificate chains to a CA in the system roots.
+    - name: EDGE_TLS_CA_PATH
+      value: /opt/tyk-microgateway/certs/grpc/tls.crt

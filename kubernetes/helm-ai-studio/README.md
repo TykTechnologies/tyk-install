@@ -26,9 +26,8 @@ files.
 | `values-enterprise.yaml` | Overlay: Enterprise images (`tyk-ai-studio-ent`, `tyk-microgateway-ent`) |
 | `values-ingress.yaml`    | Overlay: Ingress + TLS for AI Studio and the Edge Gateway             |
 | `values-rag.yaml`        | Optional: Reranker and Transformer Server                            |
-| `values-production.yaml` | Optional: production settings (gRPC TLS, metrics token)              |
-| `studio-extra.env.example` | Optional: production settings for the post-renderer               |
-| `post-render.sh`         | Applies `studio-extra.env` and the gRPC TLS secret to the release    |
+| `values-production.yaml` | Optional: production settings (gRPC TLS, metrics token, CORS, CSRF key) |
+| `post-render.sh`         | Optional: mounts a private gRPC CA into the Edge Gateway             |
 | `plugin.yaml`            | Helm 4 plugin that runs `post-render.sh` (name: `tyk-ai-studio`)     |
 | `presidio.yaml`          | Optional: Microsoft Presidio for PII Guardrails (Enterprise)         |
 
@@ -207,19 +206,13 @@ each part adds to the install command from step 3.
 
 ### The Post-Renderer
 
-Only the [Production Settings](#production-settings) need the post-renderer. The AI Studio chart
-takes single variables and volumes for AI Studio (`extraEnv`, `extraVolumes`,
-`extraVolumeMounts`), but it cannot load a whole ConfigMap or Secret as environment variables, and
-its Edge Gateway subchart cannot mount a volume, which the gRPC CA certificate needs.
-`post-render.sh` fills that gap at install time. It adds:
+Only [Production Settings](#production-settings) with a private or self-signed CA need it. The
+Edge Gateway reads the CA for AI Studio's gRPC certificate only from a file, and its subchart
+cannot mount extra volumes. `post-render.sh` mounts `tls.crt` from Secret `tyk-ai-studio-grpc-tls`
+into the Edge Gateway at install time. Everything for AI Studio itself is set with chart values.
 
-- ConfigMap `tyk-ai-studio-extra` and Secret `tyk-ai-studio-extra` as environment variables for
-  AI Studio
-- Secret `tyk-ai-studio-grpc-tls` as files, for the gRPC control connection (AI Studio gets the
-  certificate and key, the Edge Gateway its `tls.crt`)
-
-All three are optional, so the post-renderer is safe to use without them. It needs `kubectl`
-(for `kubectl kustomize`). To use it with Helm 3, add this to the install command:
+The post-renderer needs `kubectl` (for `kubectl kustomize`). With Helm 3, add this to the install
+command:
 
 ```bash
   --post-renderer ./post-render.sh
@@ -234,22 +227,6 @@ helm plugin install .
 
 ```bash
   --post-renderer tyk-ai-studio
-```
-
-Create the ConfigMap from your copy of `studio-extra.env.example`. Remove the sections you do not
-use:
-
-```bash
-cp studio-extra.env.example studio-extra.env
-kubectl create configmap tyk-ai-studio-extra -n tyk-ai \
-  --from-env-file=studio-extra.env \
-  --dry-run=client -o yaml | kubectl apply -f -
-```
-
-After you change it later, restart AI Studio:
-
-```bash
-kubectl rollout restart deployment/tyk-ai-studio -n tyk-ai
 ```
 
 ### Reranker and Transformer Server
@@ -295,13 +272,12 @@ as well as prompts.
 ### Production Settings
 
 From the AI Studio reference architecture. `values-production.yaml` turns on TLS for the gRPC
-control connection and protects `/metrics`; `studio-extra.env` adds the settings the chart cannot
-set.
+control connection, protects `/metrics`, sets the CORS origins and a shared CSRF key, all through
+chart values.
 
 1. Create a certificate for the gRPC control connection. Its name must match the AI Studio service,
    `tyk-ai-studio`. A self-signed certificate works, because the Edge Gateway trusts the
-   certificate from the same Secret. With your own CA, put the CA in a separate file and adjust
-   `EDGE_TLS_CA_PATH`.
+   certificate from the same Secret through the post-renderer.
 
    ```bash
    mkdir -p grpc-tls
@@ -314,22 +290,24 @@ set.
      --cert=grpc-tls/tls.crt --key=grpc-tls/tls.key
    ```
 
-2. Create the Secret for sensitive settings. `METRICS_AUTH_TOKEN` is needed on both AI Studio and
-   the Edge Gateway; `CSRF_KEY` keeps logins valid across restarts.
+2. Create the Secret for the metrics token, which AI Studio and the Edge Gateway both read:
 
    ```bash
    kubectl create secret generic tyk-ai-studio-extra -n tyk-ai \
-     --from-literal=CSRF_KEY=$(openssl rand -hex 16) \
      --from-literal=METRICS_AUTH_TOKEN=$(openssl rand -hex 16)
    ```
 
-3. Set `CORS_ALLOWED_ORIGINS` in `studio-extra.env` to the AI Studio URL, keep the production
-   section, and create the ConfigMap.
-4. Add `--values values-production.yaml --post-renderer ./post-render.sh` to the install command
-   (on Helm 4, `--post-renderer tyk-ai-studio` after `helm plugin install .`).
+3. Set `CSRF_KEY` in `.env` (`openssl rand -hex 32`). It keeps logins valid across restarts, and
+   the chart refuses `replicaCount` above 1 without it.
+4. Set `CORS_ALLOWED_ORIGINS` in `values-production.yaml` to the AI Studio URL.
+5. Add `--values values-production.yaml --set config.csrfKey=$CSRF_KEY` to the install command.
+   For a self-signed or private CA, also add `--post-renderer ./post-render.sh` (on Helm 4,
+   `--post-renderer tyk-ai-studio` after `helm plugin install .`). With a certificate from a CA in
+   the system roots, skip the post-renderer and remove `EDGE_TLS_CA_PATH` from
+   `values-production.yaml`.
 
-AI Studio then logs `gRPC TLS enabled`, the Edge Gateway loads `EDGE_TLS_CA_PATH` and connects,
-and `/metrics` answers `401` without `Authorization: Bearer <METRICS_AUTH_TOKEN>`.
+AI Studio then logs `gRPC TLS enabled`, the Edge Gateway connects over TLS, and `/metrics` answers
+`401` without `Authorization: Bearer <METRICS_AUTH_TOKEN>`.
 
 Also for production: use `values-ingress.yaml`, an external PostgreSQL, and never set
 `EDGE_SKIP_TLS_VERIFY` or `EDGE_ALLOW_INSECURE=true` on Edge Gateways.
@@ -346,6 +324,7 @@ helm upgrade --install tyk-ai-studio ./ai-studio/helm \
   --values values-rag.yaml \
   --values values-production.yaml \
   --post-renderer ./post-render.sh \
+  --set config.csrfKey=$CSRF_KEY \
   --set config.tykAiSecretKey=$TYK_AI_SECRET_KEY \
   --set config.grpcAuthToken=$GRPC_AUTH_TOKEN \
   --set config.microgatewayEncryptionKey=$MICROGATEWAY_ENCRYPTION_KEY \
@@ -393,7 +372,10 @@ Before you upgrade:
 - **Vendor keys are no longer read from the environment** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
   and others). Set the key on each LLM, embedder and data source.
 - **Plugins no longer inherit the pod environment.** List the variables a plugin needs in
-  `PLUGIN_ENV_PASSTHROUGH`. Upgrade the marketplace plugins to their 2.3 releases.
+  `PLUGIN_ENV_PASSTHROUGH`. Upgrade the marketplace plugins to their 2.3 releases (the
+  changelog's "Plugin releases" table). If the Marketplace page still offers an older version,
+  add the plugin by its OCI reference, for example
+  `oci://docker.tyk.io/studio-plugins/llm-cache:1.3.1`.
 - **Back up the database.** The first 2.3 start encrypts LLM keys and App keys with
   `TYK_AI_SECRET_KEY`. A 2.2 AI Studio started on that database afterwards refuses every App key,
   so stop every 2.2 replica before the first 2.3 replica starts. With one replica the `Recreate`

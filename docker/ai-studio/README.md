@@ -317,7 +317,7 @@ From the AI Studio reference architecture. Set `METRICS_AUTH_TOKEN` in `.env` fi
 
 - Serves the gRPC control connection over TLS with the certificate in `studio-certs/`. The Edge
   Gateway trusts that certificate (`EDGE_TLS_CA_PATH`) and checks it as `ai-studio.localhost`.
-- Sets `CORS_ALLOWED_ORIGINS` to the AI Studio URL and `PLUGIN_BLOCK_INTERNAL_URLS=true`.
+- Sets `CORS_ALLOWED_ORIGINS` to the AI Studio URL.
 - Requires `Authorization: Bearer <METRICS_AUTH_TOKEN>` on `/metrics` for AI Studio and the Edge
   Gateway.
 
@@ -366,7 +366,10 @@ Before you upgrade:
 - **Vendor keys are no longer read from the environment** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
   and others). Set the key on each LLM, embedder and data source.
 - **Plugins no longer inherit the container environment.** List the variables a plugin needs in
-  `PLUGIN_ENV_PASSTHROUGH`. Upgrade the marketplace plugins to their 2.3 releases.
+  `PLUGIN_ENV_PASSTHROUGH`. Upgrade the marketplace plugins to their 2.3 releases (the
+  changelog's "Plugin releases" table). If the Marketplace page still offers an older version,
+  add the plugin by its OCI reference, for example
+  `oci://docker.tyk.io/studio-plugins/llm-cache:1.3.1`.
 - **Back up the database.** The first 2.3 start encrypts LLM keys and App keys with
   `TYK_AI_SECRET_KEY`. A 2.2 AI Studio started on that database afterwards refuses every App key.
   `docker compose up -d` stops the 2.2 container before the 2.3 one starts, as required.
