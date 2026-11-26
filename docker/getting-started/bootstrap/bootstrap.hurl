@@ -1,7 +1,7 @@
 # Wait for Dashboard to be ready with retries
 GET http://tyk-dashboard:3000/hello
 [Options]
-retry: 10
+retry: 20
 retry-interval: 3000
 HTTP 200
 [Asserts]
@@ -342,6 +342,13 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 status == 200
+
+# Wait for the Portal to be ready with retries
+GET http://tyk-portal:3001/ready
+[Options]
+retry: 20
+retry-interval: 3000
+HTTP 200
 
 # Bootstrap Enterprise Portal with admin user
 POST http://tyk-portal:3001/portal-api/bootstrap

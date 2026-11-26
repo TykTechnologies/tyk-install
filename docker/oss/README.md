@@ -18,9 +18,10 @@ version control rather than through a UI — which many teams prefer.
 | Analytics | Redis, drained by Pump to a sink you choose | Dashboard UI |
 
 You get: routing, every authentication method, rate limits, quotas, transforms, caching, circuit
-breakers, JavaScript and gRPC plugins, Tyk Streams.
+breakers, JavaScript and gRPC plugins.
 
-You do not get: Dashboard UI, Developer Portal, RBAC and multi-tenancy, MDCB, single sign-on.
+You do not get: Dashboard UI, Developer Portal, RBAC and multi-tenancy, MDCB, single sign-on, Tyk
+Streams.
 
 Using `tyk-gateway-ee` here by mistake is a common error — that is the licensed Enterprise build.
 
@@ -203,6 +204,6 @@ docker compose down -v    # stop and destroy volumes
 ## Reference
 
 - <https://tyk.io/docs/tyk-oss-gateway>
-- <https://tyk.io/docs/tyk-open-source.mdx>
+- <https://tyk.io/docs/tyk-open-source>
 - <https://tyk.io/docs/planning-for-production>
 - Kubernetes equivalent: [`../../kubernetes/helm-oss/`](../../kubernetes/helm-oss/)

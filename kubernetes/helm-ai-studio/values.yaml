@@ -1,4 +1,4 @@
-# Tyk AI Studio 2.2.1 - values for the `midsommar` chart in TykTechnologies/ai-studio (helm/)
+# Tyk AI Studio 2.2.2 - values for the `midsommar` chart in TykTechnologies/ai-studio (helm/)
 #
 # Community Edition, AI Studio (control plane) + Edge Gateway (data plane) + internal PostgreSQL.
 # Secrets are passed with --set from .env (see README), never stored here.
@@ -12,7 +12,7 @@ fullnameOverride: tyk-ai-studio
 midsommar:
   image:
     repository: tykio/tyk-ai-studio # Enterprise: tykio/tyk-ai-studio-ent
-    tag: v2.2.1
+    tag: v2.2.2
   ingress:
     enabled: false
   service:
@@ -61,7 +61,7 @@ microgateway:
   enabled: true
   image:
     repository: tykio/tyk-microgateway # Enterprise: tykio/tyk-microgateway-ent
-    tag: v2.2.1
+    tag: v2.2.2
   service:
     type: ClusterIP
     port: 8080

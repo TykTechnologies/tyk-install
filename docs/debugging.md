@@ -27,7 +27,7 @@ so identify which one you have before editing anything.
 | Log signal | Cause | Fix |
 | --- | --- | --- |
 | `license is invalid` / `expired` | wrong or stale licence | Check `TYK_LICENSE_KEY` in `.env`. Trials expire — re-issue at <https://tyk.io/self-managed-trial/>. Never print the value while checking it. |
-| `pq: database "tyk_analytics" does not exist` | Postgres init script did not run | The init SQL runs only on an empty volume. `docker compose down -v` and up again, which destroys data — confirm first. |
+| `pq: database "tyk_dashboard" does not exist` (or `"portal"`) | Postgres init script (`docker/utils/dbs.sql`) did not run | The init SQL runs only on an empty volume. `docker compose down -v` and up again, which destroys data — confirm first. |
 | `connection refused` to Postgres | Postgres not ready | The Compose healthcheck should prevent this; if it recurs, Postgres is crash-looping — read its own logs. |
 
 ## A route returns the wrong thing
@@ -38,7 +38,7 @@ so identify which one you have before editing anything.
 | 404 on every path | No APIs loaded at all. In OSS check the mount; in Self-Managed check the Gateway reached the Dashboard. |
 | 503 with an HTML error body | The upstream is failing, not Tyk. An HTML body from nginx or a cloud LB means Tyk proxied correctly and the upstream answered 503. Test the upstream directly. |
 | 502 | Tyk cannot reach the upstream at all. Check `target_url` resolves inside the container network. |
-| 401 where you expected none | `use_keyless` is false. Keyless requires it explicitly. |
+| 401 where you expected none | The API has authentication enabled: `server.authentication.enabled` in Tyk OAS (`x-tyk-api-gateway`), `use_keyless: false` in Tyk Classic. A keyless Tyk OAS API has no authentication block, or `enabled: false`. |
 | Works via port-forward, not via ingress | Ingress or Route problem, not Tyk. |
 
 Distinguishing 502 from 503 matters: 502 is Tyk's own failure to connect, 503 is usually the
@@ -73,7 +73,7 @@ Use the APIs, not the database. Direct database access to recover a Dashboard pa
 produce an account that behaves oddly later.
 
 `docker/getting-started/` prints its bootstrapped credentials; `utils/bootstrap/` writes them to
-its `bootstrap-output/` directory, which is gitignored.
+`utils/bootstrap/bootstrap-output/` on the host (a bind mount), which is gitignored.
 
 ## When you cannot resolve it
 
@@ -83,6 +83,6 @@ returned. `verify_deployment.sh` exits non-zero precisely so this is not glossed
 
 ## Reference
 
-- <https://tyk.io/docs/troubleshooting>
+- <https://tyk.io/docs/api-management/troubleshooting-debugging>
 - <https://tyk.io/docs/api-management/gateway-config-tyk-oas>
 - <https://support.tyk.io/hc/en-gb>

@@ -8,7 +8,7 @@ CREDS_FILE="./bootstrap-output/bootstrap-credentials.txt"
 #### environment vars to set if running script standalone not through docker-compose
 # TYK_LICENSE_KEY=
 # DASHBOARD_URL=http://localhost:3000
-# GATEWAY_URL=https://localhost:8080
+# GATEWAY_URL=http://localhost:8080
 # PORTAL_URL=http://localhost:3001
 # ADMIN_SECRET=admin-secret
 # Colors
@@ -152,6 +152,7 @@ get_or_create_organization() {
             --data '{
                 "owner_name": "Demo Organization",
                 "cname_enabled": true,
+                "hybrid_enabled": true,
                 "event_options": {
                     "hashed_key_event": {"redis": true},
                     "key_event": {"redis": true}

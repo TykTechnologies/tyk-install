@@ -94,7 +94,7 @@ Thresholds are defaults; tune them per estate. Run the tests with:
 
 ```bash
 docker run --rm -v "$PWD/observability/rules:/rules" -w /rules/tests \
-  --entrypoint promtool quay.io/prometheus/prometheus:v3.15.0 \
+  --entrypoint promtool quay.io/prometheus/prometheus:v3.15.1 \
   test rules tyk-control-plane.rules.test.yml tyk-gateway.rules.test.yml
 ```
 
@@ -167,9 +167,9 @@ docker logs tyk-otel-collector 2>&1 | grep export
 If an exporter cannot start at all, for example `google-cloud` or `aws` without credentials, the
 whole collector fails to start, and the local stack receives nothing until it is fixed.
 
-`prometheus-remote-write` and `otlp` are tested end to end against local stand-ins (authenticated
-delivery of metrics, traces and logs, and the Tyk dashboards and alert rules on the remote-write
-copy). The vendor-specific files are checked to load, but not against a real account. OTLP backends store resource
+`prometheus-remote-write` and `otlp` deliver metrics, traces and logs with authentication, and the
+Tyk dashboards and alert rules work on the remote-write copy. The vendor-specific files configure
+each vendor's own exporter; confirm delivery in your account. OTLP backends store resource
 attributes their own way, so the PromQL dashboards may need their label names adjusted; send metrics
 with `prometheus-remote-write` to keep them as they are. Each file adds its own `*/export` pipelines,
 so use one at a time, or merge two into a single file. Dynatrace only accepts delta metrics: add

@@ -37,8 +37,6 @@ TOOLS = {
            "https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html"),
     "curl": (["curl", "--version"], "verify endpoints", "preinstalled on macOS and most Linux"),
     "jq": (["jq", "--version"], "read JSON from the Tyk APIs", "brew install jq  |  apt-get install jq"),
-    "hurl": (["hurl", "--version"], "run docker/getting-started's bootstrap",
-             "brew install hurl  |  https://hurl.dev/docs/installation.html"),
     "openssl": (["openssl", "version"], "generate certificates and secrets",
                 "preinstalled on macOS and most Linux"),
     "git": (["git", "--version"], "track your own overlays", "brew install git"),
@@ -46,7 +44,7 @@ TOOLS = {
 
 # platform -> (required tools, optional tools)
 PLATFORMS = {
-    "docker":    (["docker", "docker compose", "curl"], ["jq", "openssl", "hurl", "git"]),
+    "docker":    (["docker", "docker compose", "curl"], ["jq", "openssl", "git"]),
     "helm":      (["helm", "kubectl", "curl"], ["jq", "openssl", "git"]),
     "openshift": (["helm", "kubectl", "oc", "curl"], ["jq", "openssl", "git"]),
     "baremetal": (["curl"], ["jq", "openssl", "git"]),

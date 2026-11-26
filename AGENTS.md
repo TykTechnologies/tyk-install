@@ -88,9 +88,10 @@ findings and hand back edits for a human to apply to a copy of the file.
 
 ## Versions
 
-Component versions are pinned in each `.env.example` and in the Helm `values*.yaml` image tags,
-and a workflow in the Tyk docs repository raises a pull request here on every release to keep
-them at the latest stable tag. Read the pin from the file and never quote a version from memory.
+Component versions are pinned in each `.env.example` and in the Helm `values*.yaml` image tags.
+Tyk component image pins in `.env.example` and the Helm `values*.yaml` are raised by a workflow
+in the Tyk docs repository; AI Studio on Helm, tyk-sync, third-party images and README examples
+are updated by hand. Read the pin from the file and never quote a version from memory.
 Use the pinned versions unless the user asks otherwise, never mix a Gateway and Dashboard from
 different minor releases, and record the versions actually deployed in any summary you produce.
 

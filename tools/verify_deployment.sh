@@ -8,6 +8,7 @@
 #   verify_deployment.sh --edition oss
 #   verify_deployment.sh --edition self-managed --route /httpbin/get
 #   verify_deployment.sh --edition mdcb-data-plane --gateway http://localhost:8081
+#   verify_deployment.sh --edition ai-studio --stack tyk-ai   # gateway defaults to the Edge Gateway, :9091
 #
 # On Kubernetes or OpenShift, pass --namespace so component checks use kubectl
 # instead of Docker, and point --gateway at a port-forward or Route:
@@ -19,7 +20,7 @@
 set -uo pipefail
 
 EDITION=self-managed
-GATEWAY=http://localhost:8080
+GATEWAY=
 DASHBOARD=http://localhost:3000
 PORTAL=http://localhost:3001
 ROUTE=
@@ -33,7 +34,8 @@ usage() {
 Usage: verify_deployment.sh --edition <name> [options]
 
   --edition    oss | self-managed | hybrid | mdcb-control-plane | mdcb-data-plane | ai-studio
-  --gateway    Gateway base URL          (default http://localhost:8080)
+  --gateway    Gateway base URL          (default http://localhost:8080;
+               http://localhost:9091, the Edge Gateway, for ai-studio)
   --dashboard  Dashboard base URL        (default http://localhost:3000)
   --portal     Developer Portal base URL (default http://localhost:3001)
   --route      Path to prove proxying, e.g. /httpbin/get. Required for real evidence.
@@ -61,6 +63,12 @@ while [[ $# -gt 0 ]]; do
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
 done
+
+# The AI Studio stack has no Tyk Gateway on 8080; its Edge Gateway is on 9091.
+if [[ -z "$GATEWAY" ]]; then
+  if [[ "$EDITION" == "ai-studio" ]]; then GATEWAY=http://localhost:9091
+  else GATEWAY=http://localhost:8080; fi
+fi
 
 PASS=0; FAIL=0; SKIP=0
 pass() { printf '  ok    %s\n' "$1"; PASS=$((PASS+1)); }
@@ -206,6 +214,10 @@ check_proxy() {
   fi
   # An undefined route must 404, proving the gateway is routing rather than
   # blanket-forwarding everything it receives.
+  if [[ "$EDITION" == "ai-studio" ]]; then
+    skip "undefined route" "the AI Studio Edge Gateway routes by its own rules"
+    return
+  fi
   local miss; miss=$(status_of "$GATEWAY/__verify_no_such_route__/")
   if [[ "$miss" == "404" ]]; then
     pass "undefined route returns 404"

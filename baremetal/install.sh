@@ -19,6 +19,8 @@ ENV_FILE=
 VERSION=
 DIST=
 OSNAME=
+MIRROR=https://packagecloud.io/tyk
+RPM_KEY=
 
 # Lookups are case statements rather than associative arrays so this runs on
 # bash 3.2, which is what macOS ships -- --dry-run is meant to be reviewable
@@ -34,14 +36,23 @@ usage() {
 Usage: sudo ./install.sh [--components gateway,dashboard,pump] [options]
 
   --components  Comma-separated: gateway, dashboard, pump. Default: gateway.
-  --version     Pin a package version, e.g. 5.14.0. Default: the repo's latest.
+  --version     Pin a package version, e.g. 5.16.3. Default: the repo's latest.
   --env-file    File holding licence variables (TYK_LICENSE_KEY, ...). Values are
                 never printed. Without this, the environment is used.
   --os/--dist   Override the upstream distribution used for the package repo, e.g.
-                --os ubuntu --dist noble. Needed when your release is newer than
-                Tyk's published builds: packagecloud returns 404 for an unknown
-                codename, and apt then reports "does not have a Release file".
-                Known-good: ubuntu noble/jammy, debian bookworm, el 8/9.
+                --os ubuntu --dist noble, or --os el --dist 9. Needed when your
+                release is newer than Tyk's published builds (packagecloud returns
+                404 for an unknown codename, and apt then reports "does not have a
+                Release file"), or when /etc/os-release names a distribution this
+                script does not map. Known-good: ubuntu noble/jammy, debian
+                bookworm, el 8/9.
+  --mirror      Base URL of a mirror laid out like https://packagecloud.io/tyk,
+                for air-gapped hosts: <mirror>/tyk-gateway/gpgkey,
+                <mirror>/tyk-gateway/ubuntu/..., <mirror>/tyk-gateway/el/9/...
+                https:// or file:// (a local directory). See README.md,
+                "Air-gapped hosts".
+  --rpm-key     Where to get Tyk's RPM signing key. Default: the Tyk key server,
+                or <mirror>/tyk.io.rpm.signing.key.2020 with --mirror.
   --dry-run     Print what would happen and exit. Safe to run anywhere.
   -h, --help    This message.
 
@@ -57,6 +68,8 @@ while [[ $# -gt 0 ]]; do
     --env-file)   ENV_FILE=${2:?}; shift 2 ;;
     --dist)       DIST=${2:?}; shift 2 ;;
     --os)         OSNAME=${2:?}; shift 2 ;;
+    --mirror)     MIRROR=${2:?}; MIRROR=${MIRROR%/}; shift 2 ;;
+    --rpm-key)    RPM_KEY=${2:?}; shift 2 ;;
     --dry-run)    DRY_RUN=true; shift ;;
     -h|--help)    usage; exit 0 ;;
     *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
@@ -118,8 +131,10 @@ fi
 step "Licences"
 if [[ -n "$ENV_FILE" ]]; then
   if [[ -f "$ENV_FILE" ]]; then
+    set -a
     # shellcheck disable=SC1090
-    set -a; . "$ENV_FILE"; set +a
+    . "$ENV_FILE"
+    set +a
     log "loaded variables from $ENV_FILE (values not shown)"
   else
     printf 'env file not found: %s\n' "$ENV_FILE" >&2; exit 1
@@ -139,25 +154,152 @@ done
 
 # ---------------------------------------------------------------- repositories
 step "Package repositories"
-add_repo() {
-  local repo=$1 pre=""
-  # The packagecloud script auto-detects the distro, and 404s on a release Tyk
-  # has not published for. os/dist override that detection.
-  [[ -n "$OSNAME" ]] && pre+="os=$OSNAME "
-  [[ -n "$DIST" ]] && pre+="dist=$DIST "
-  [[ -n "$pre" ]] && log "pinning upstream repo to ${pre% }"
+# Each repository is written out explicitly and pinned to its signing key, as
+# https://tyk.io/docs/tyk-self-managed/install/linux describes. Nothing fetched
+# from the network is executed: packagecloud's install script is not used.
+#
+# The file names match the ones packagecloud's script writes, so a host set up
+# that way is converted in place rather than left with two entries for the
+# same repository (apt refuses conflicting Signed-By values).
+os_field() {
+  [[ -r /etc/os-release ]] || return 0
+  sed -n "s/^$1=//p" /etc/os-release | tr -d '"' | head -n 1
+}
+
+resolve_upstream() {
+  local id
+  id=$(os_field ID)
   case "$PM" in
     apt)
-      run bash -c "curl -fsSL https://packagecloud.io/install/repositories/tyk/${repo}/script.deb.sh | ${pre}bash"
+      if [[ -z "$OSNAME" ]]; then
+        case "$id" in ubuntu|debian) OSNAME=$id ;; esac
+      fi
+      [[ -n "$DIST" ]] || DIST=$(os_field VERSION_CODENAME)
       ;;
     yum|dnf)
-      run bash -c "curl -fsSL https://packagecloud.io/install/repositories/tyk/${repo}/script.rpm.sh | ${pre}bash"
+      if [[ -z "$OSNAME" ]]; then
+        case "$id" in rhel|centos|rocky|almalinux|ol) OSNAME=el ;; esac
+      fi
+      if [[ -z "$DIST" ]]; then
+        DIST=$(os_field VERSION_ID)
+        DIST=${DIST%%.*}
+      fi
       ;;
     none)
-      log "would add packagecloud repo tyk/${repo}${pre:+ (${pre% })}"
+      OSNAME=${OSNAME:-<os>}
+      DIST=${DIST:-<dist>}
+      return 0
+      ;;
+  esac
+  if [[ -z "$OSNAME" || -z "$DIST" ]]; then
+    printf '\nCannot map this distribution (%s) to a Tyk package repository.\n' "${id:-unknown}" >&2
+    printf 'Pass one explicitly, e.g. --os ubuntu --dist noble, or --os el --dist 9.\n' >&2
+    exit 2
+  fi
+}
+
+# Write stdin to a file, or show it in a dry run.
+write_file() {
+  local dst=$1 mode=$2 content
+  content=$(cat)
+  if [[ "$DRY_RUN" == true ]]; then
+    printf '  would write %s:\n' "$dst"
+    printf '%s\n' "$content" | sed 's/^/      /'
+    return 0
+  fi
+  install -d -m 0755 "$(dirname "$dst")"
+  printf '%s\n' "$content" > "$dst.tmp"
+  chmod "$mode" "$dst.tmp"
+  mv "$dst.tmp" "$dst"
+}
+
+# Download a public signing key over HTTPS (or copy it from a local mirror), and
+# refuse anything that is not one. A key is never fetched over plain HTTP.
+fetch_key() {
+  local url=$1 dst=$2
+  if [[ "$DRY_RUN" == true ]]; then
+    printf '  would download %s -> %s\n' "$url" "$dst"
+    return 0
+  fi
+  install -d -m 0755 "$(dirname "$dst")"
+  if ! curl -fsSL --proto '=https,file' --tlsv1.2 -o "$dst.tmp" "$url"; then
+    printf 'Could not fetch %s (only https:// and file:// are accepted for keys).\n' "$url" >&2
+    rm -f "$dst.tmp"
+    exit 1
+  fi
+  if ! grep -q 'BEGIN PGP PUBLIC KEY BLOCK' "$dst.tmp"; then
+    printf 'Not a PGP public key: %s\n' "$url" >&2
+    rm -f "$dst.tmp"
+    exit 1
+  fi
+  chmod 0644 "$dst.tmp"
+  mv "$dst.tmp" "$dst"
+}
+
+# RPM packages are signed with Tyk's own key, and repository metadata with each
+# packagecloud repository's key. Tyk's key is imported into rpm up front rather
+# than listed in gpgkey=: dnf imports every listed key when it checks a package,
+# and on EL9 the packagecloud key's SHA-1 self-signature is rejected by the
+# default crypto policy, which fails the whole install. Listed alone, the
+# packagecloud key is used for repository metadata only, which EL9 accepts.
+if [[ -z "$RPM_KEY" ]]; then
+  if [[ "$MIRROR" == https://packagecloud.io/tyk ]]; then
+    RPM_KEY=https://keyserver.tyk.io/tyk.io.rpm.signing.key.2020
+  else
+    RPM_KEY="$MIRROR/tyk.io.rpm.signing.key.2020"
+  fi
+fi
+RPM_KEY_IMPORTED=false
+
+add_repo() {
+  local repo=$1 base="$MIRROR/$1" key
+  case "$PM" in
+    apt)
+      key="/etc/apt/keyrings/tyk_${repo}.asc"
+      fetch_key "$base/gpgkey" "$key"
+      printf 'deb [signed-by=%s] %s/%s/ %s main' "$key" "$base" "$OSNAME" "$DIST" \
+        | write_file "/etc/apt/sources.list.d/tyk_${repo}.list" 0644
+      ;;
+    yum|dnf)
+      if [[ "$RPM_KEY_IMPORTED" != true ]]; then
+        key=/etc/pki/rpm-gpg/RPM-GPG-KEY-tyk
+        fetch_key "$RPM_KEY" "$key"
+        run rpm --import "$key"
+        RPM_KEY_IMPORTED=true
+      fi
+      # A mirror built with reposync and createrepo has regenerated, unsigned
+      # metadata, so only package signatures (Tyk's key, imported above) are
+      # checked there. packagecloud itself also signs its metadata.
+      local metacheck="repo_gpgcheck=1
+gpgkey=${base}/gpgkey"
+      [[ "$MIRROR" == https://packagecloud.io/tyk ]] || metacheck="repo_gpgcheck=0"
+      write_file "/etc/yum.repos.d/tyk_${repo}.repo" 0644 <<EOF
+[tyk_${repo}]
+name=tyk_${repo}
+baseurl=${base}/${OSNAME}/${DIST}/\$basearch
+enabled=1
+gpgcheck=1
+${metacheck}
+sslverify=1
+metadata_expire=300
+EOF
+      ;;
+    none)
+      log "would add ${base}/${OSNAME}/ ${DIST}, pinned to ${base}/gpgkey"
       ;;
   esac
 }
+
+# The repository setup itself needs curl and CA certificates (minimal images
+# often lack them on apt systems).
+if [[ "$PM" == apt ]] && ! command -v curl >/dev/null 2>&1; then
+  log "installing curl and ca-certificates"
+  run apt-get update -y
+  run apt-get install -y curl ca-certificates
+fi
+
+resolve_upstream
+log "upstream:    ${OSNAME} ${DIST}"
 SEEN=" "
 for c in "${SELECTED[@]}"; do
   r=$(repo_of "$c")

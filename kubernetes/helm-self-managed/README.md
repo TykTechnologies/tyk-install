@@ -99,13 +99,12 @@ kubectl get secret tyk-conf -n tyk -oyaml
 
 ### 4. Install Dependencies (PostgreSQL & Redis)
 
-```bash
-# Add Bitnami repository
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update
+The `bitnamilegacy` Redis and PostgreSQL images receive no further updates and are for evaluation
+only; in production use a maintained Redis and PostgreSQL (a managed service or a maintained chart).
 
+```bash
 # Install PostgreSQL (creates required databases)
-helm install tyk-postgres bitnami/postgresql \
+helm install tyk-postgres oci://registry-1.docker.io/bitnamicharts/postgresql \
   --set image.repository=bitnamilegacy/postgresql \
   --namespace tyk \
   --set auth.username=$POSTGRES_USER \
@@ -139,7 +138,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n tyk
 # Cluster admin privileges required for installing on RedHat OpenShift
 helm install \
   cert-manager oci://quay.io/jetstack/charts/cert-manager \
-  --version v1.21.2 \
+  --version v1.21.3 \
   --namespace cert-manager \
   --create-namespace \
   --set crds.enabled=true
@@ -1050,15 +1049,14 @@ Set `PORTAL_DISABLECSRFCHECK=true` in values.yaml under `tyk-dev-portal.extraEnv
 # Check PostgreSQL is running
 kubectl get pods -n tyk -l app.kubernetes.io/name=postgresql
 
-# Test database connectivity from a pod
-kubectl exec -it -n tyk deployment/dashboard-tyk-tyk-dashboard -- /bin/sh
-# Inside the pod:
-# Check if database connection string is available (should show the value)
-env | grep DATABASE
+# Check which secret key feeds the Dashboard's connection strings. The Dashboard
+# image has no shell, so read the Deployment rather than exec into the pod
+kubectl get deploy dashboard-tyk-tyk-dashboard -n tyk -o jsonpath='{.spec.template.spec.containers[0].env}' \
+  | jq '.[] | select(.name | test("CONNECTIONSTRING"))'
 
 # Verify connection string format in secret
 kubectl get secret tyk-conf -n tyk -o jsonpath='{.data.DashDatabaseConnectionString}' | base64 -d && echo
-# Should be: postgresql://user:password@host:5432/database
+# Should be: host=<host> port=5432 dbname=<db> user=<user> password=<password> sslmode=<mode>
 
 # Check PostgreSQL logs
 kubectl logs -n tyk -l app.kubernetes.io/name=postgresql

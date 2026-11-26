@@ -1,7 +1,7 @@
 services:
   tyk-redis:
     restart: unless-stopped
-    image: redis:7.2.0
+    image: redis:7.2.17
     container_name: tyk-redis-oss
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -19,7 +19,7 @@ services:
   # on a public endpoint being reachable. Replace it with your own service.
   httpbin:
     restart: unless-stopped
-    image: mccutchen/go-httpbin:${HTTPBIN_VERSION:-v2.15.0}
+    image: mccutchen/go-httpbin:${HTTPBIN_VERSION:-2.26.0}
     container_name: tyk-httpbin-oss
     networks:
       - tyk-oss
@@ -47,11 +47,6 @@ services:
         condition: service_healthy
       httpbin:
         condition: service_started
-    healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/hello" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
   # Optional. OSS has no Dashboard to render analytics, so Pump only earns its
   # keep once it is pointed at a sink you actually read. Enable with:

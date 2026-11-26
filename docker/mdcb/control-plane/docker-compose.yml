@@ -1,7 +1,7 @@
 services:
   tyk-redis:
     restart: unless-stopped
-    image: redis:7.2.0
+    image: redis:7.2.17
     container_name: tyk-redis-cp
     ports:
       - "${REDIS_PORT:-6379}:6379"

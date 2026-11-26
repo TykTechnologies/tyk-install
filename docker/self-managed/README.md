@@ -72,22 +72,14 @@ You have two options for bootstrapping:
 
 #### Option A: Automated Bootstrap (Recommended)
 
-Use the Bootstrap Utility for automated setup. See **[Bootstrap Utility README](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md)** for complete instructions.
+Use the Bootstrap Utility for automated setup. See **[Bootstrap Utility README](../../utils/bootstrap/README.md)** for complete instructions.
 
 **Quick start:**
 
 ```bash
-# Clone full repo (if you only have this folder)
-git clone https://github.com/TykTechnologies/tyk-Install.git
-cd tyk-Install/utils/bootstrap
-
-# You will need to set env vars before running. Check the Bootstrap README
-# Run the bootstrap script docker tools profile
+cd ../../utils/bootstrap
+printf 'TYK_LICENSE_KEY=\n' > .env   # then paste the licence in an editor; .env is gitignored
 docker compose --profile tools run --rm tyk-bootstrap
-
-# Run the bootstrap script directly
-./bootstrap.sh
-
 ```
 
 The script creates: organization, admin user, test API, policy, API key, and Portal configuration.
@@ -165,7 +157,7 @@ curl http://localhost:8080/httpbin/get -H "Authorization: <your-api-key>"
 
 ## Phase 4: Bootstrap Process (Manual)
 
-> **Note:** If you used the [Bootstrap Utility](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md), skip to [Phase 5](#phase-5-first-api-test). The utility handles all steps below automatically.
+> **Note:** If you used the [Bootstrap Utility](../../utils/bootstrap/README.md), skip to [Phase 5](#phase-5-first-api-test). The utility handles all steps below automatically.
 
 If you prefer manual setup:
 
@@ -292,7 +284,7 @@ curl http://localhost:8080/test-api/get -H "Authorization: <your-key>"
 
 ## Phase 6: Developer Portal
 
-> **Note:** If you used the [Bootstrap Utility](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md), Portal is already configured. Skip to Step 2.
+> **Note:** If you used the [Bootstrap Utility](../../utils/bootstrap/README.md), Portal is already configured. Skip to Step 2.
 
 ### Step 1: Configure Portal Provider
 
@@ -343,7 +335,7 @@ export DASHBOARD_API_KEY="<from_System_Management_Users>"
 docker run --rm \
   --network tyk \
   -v $(pwd):/app \
-  tykio/tyk-sync:v2.2.2 \
+  tykio/tyk-sync:v2.3.0 \
   dump \
   --dashboard http://tyk-dashboard:3000 \
   --secret ${DASHBOARD_API_KEY} \
@@ -366,7 +358,7 @@ vi backup/<api-file>.json
 docker run --rm \
   --network tyk \
   -v $(pwd):/app \
-  tykio/tyk-sync:v2.2.2 \
+  tykio/tyk-sync:v2.3.0 \
   sync \
   --dashboard http://tyk-dashboard:3000 \
   --secret ${DASHBOARD_API_KEY} \
@@ -398,7 +390,13 @@ need Dashboard 5.16+ and Portal 1.20+. See [docker/observability](../observabili
 
 ## Production Considerations
 
-- Check the env files under confs and apply the PROD recommendations noted in comments.
+The env files under `confs/` carry `# PROD:`, `# PROD/PERFORMANCE:` and `# SECURITY:` markers. To
+see what production would change:
+
+```bash
+python3 ../../tools/profiles.py \
+  audit confs/*.env --profile prod --profile performance --profile security
+```
 
 ---
 
@@ -416,7 +414,7 @@ docker compose down -v --remove-orphans
 docker network prune -f
 ```
 
-**If using the full repo with Bootstrap Utility:** See [Bootstrap Utility - Cleanup](https://github.com/TykTechnologies/tyk-Install/blob/main/utils/bootstrap/README.md#-cleanup) for removing bootstrap data and allowing fresh re-bootstrap.
+**If using the full repo with Bootstrap Utility:** See [Bootstrap Utility - Cleanup](../../utils/bootstrap/README.md#-cleanup) for removing bootstrap data and allowing fresh re-bootstrap.
 
 ---
 

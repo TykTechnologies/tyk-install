@@ -91,24 +91,23 @@ tyk-gateway:
     service:
       type: ClusterIP # PROD: Use LoadBalancer or an Ingress rather than port-forwarding
 
+    # OpenShift (tyk-charts 5.4.0+): uncomment to let the Security Context
+    # Constraint assign UID/GID, or generate the overlay with
+    # `profiles.py apply --profile openshift` (see the README). Use
+    # `enabled: false`: `{}` has no effect.
     # -------------------------------------------------------------------------
     # Required for deploying on RedHat OpenShift
     # -------------------------------------------------------------------------
     # securityContext:
-    #   runAsUser: null
-    #   fsGroup: null
-    #   runAsNonRoot: true
+    #   enabled: false
     # containerSecurityContext:
-    #   runAsNonRoot: true
-    #   runAsUser: null
-    #   allowPrivilegeEscalation: false
-    #   privileged: false
-    #   readOnlyRootFilesystem: true
-    #   seccompProfile:
-    #     type: RuntimeDefault
-    #   capabilities:
-    #     drop:
-    #       - ALL
+    #   enabled: false
+    # # All three gateway blocks must be off: left enabled, the init container's
+    # # block falls back to UID 65532, which restricted-v2 rejects.
+    # initContainers:
+    #   setupDirectories:
+    #     securityContext:
+    #       enabled: false
 
     # PROD: Always set requests and limits. Without requests the scheduler cannot
     # place pods sensibly; without limits one Gateway can starve its neighbours.
@@ -176,3 +175,24 @@ tyk-gateway:
       #     paths:
       #       - path: /
       #         pathType: Prefix
+
+# -------------------------------------------------------------------------
+# Required for deploying on RedHat OpenShift
+# -------------------------------------------------------------------------
+# # Pump, only rendered when global.components.pump is true.
+# tyk-pump:
+#   pump:
+#     securityContext:
+#       enabled: false
+#     containerSecurityContext:
+#       enabled: false
+
+# -------------------------------------------------------------------------
+# Required for deploying on RedHat OpenShift
+# -------------------------------------------------------------------------
+# # `helm test` pod. Its default pins runAsUser 1000, which restricted-v2 rejects.
+# tests:
+#   securityContext:
+#     enabled: false
+#   containerSecurityContext:
+#     enabled: false

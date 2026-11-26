@@ -61,7 +61,7 @@ cp .env.example .env
 #   - TYK_GROUP_ID
 #
 # Required for Operator (if using) see step 8. :
-#   - TYK_DASHBOARD_URL (e.g., https://your-org.cloud.tyk.io)
+#   - TYK_DASHBOARD_URL (e.g., https://your-dashboard.cloud-ara.tyk.io)
 #   - TYK_OPERATOR_API_KEY (separate user with appropriate permissions) see step 8.
 #   - TYK_OPERATOR_LICENSE
 ```
@@ -115,10 +115,10 @@ global:
     sslInsecureSkipVerify: true
 
     # Add your MDCB connection string here
-    connectionString: "__.cloud-ara.tyk.io:443" # Replace with your MDCB endpoint
+    connectionString: "your-mdcb.cloud-ara.tyk.io:443" # Replace with your MDCB endpoint
 ```
 
-**For Tyk Cloud:** Use `__.cloud-ara.tyk.io:443`
+**For Tyk Cloud:** Use `your-mdcb.cloud-ara.tyk.io:443`
 **For Self-Managed:** Use your MDCB endpoint
 
 **Option B - in a secret (tyk-charts 5.4.0+).** Store the connection string in a secret and point
@@ -138,11 +138,10 @@ global:
 
 ### 4. Install Dependencies (Redis)
 
-```bash
-# Add Bitnami repository
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo update
+The `bitnamilegacy` Redis image receives no further updates and is for evaluation only; in
+production use a maintained Redis (a managed service or a maintained chart).
 
+```bash
 # Install Redis
 # On RedHat OpenShift no extra flags are needed: this chart version detects
 # OpenShift and drops its fixed UID/fsGroup so the SCC can assign them.
@@ -504,7 +503,7 @@ Tyk Operator enables declarative API management using Kubernetes CRDs. This is u
 # Install cert-manager (required for Tyk Operator webhooks)
 helm install \
   cert-manager oci://quay.io/jetstack/charts/cert-manager \
-  --version v1.21.2 \
+  --version v1.21.3 \
   --namespace cert-manager \
   --create-namespace \
   --set crds.enabled=true
@@ -515,7 +514,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=cert-manager -n
 # Create operator configuration secret
 # IMPORTANT: Use TYK_OPERATOR_API_KEY (separate user), not TYK_API_KEY
 # TYK_URL should point to your Control Plane Dashboard:
-#   - Tyk Cloud: https://_____.cloud-ara.tyk.io/
+#   - Tyk Cloud: https://your-dashboard.cloud-ara.tyk.io
 #   - Self-Managed MDCB: https://<dashboard-url>
 kubectl create secret generic tyk-operator-conf \
   --namespace tyk-dp \

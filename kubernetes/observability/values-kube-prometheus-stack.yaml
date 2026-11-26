@@ -45,7 +45,7 @@ prometheus:
 
 grafana:
   image:
-    tag: 13.2.4
+    tag: 13.2.7
   # Anyone who can reach Grafana is an Admin, no login. PROD: set auth.anonymous.enabled=false
   # (or org_role=Viewer), auth.disable_login_form=false, and admin.existingSecret instead of adminPassword
   adminPassword: admin

@@ -22,19 +22,21 @@ cd docker/getting-started
 Creates the organisation, an admin user, sample APIs including a Petstore OAS API, and prints the
 credentials. This is the evaluation path — prefer it when someone just wants to see Tyk working.
 
-It needs `hurl`, which is usually not installed: `brew install hurl`. The script runs it from a
-container image, so check `start.sh` before assuming a local install is required.
-
 ## utils/bootstrap
 
 ```bash
 cd utils/bootstrap
-cp .env.example .env      # set the Dashboard URL and licence
-docker compose up
+printf 'TYK_LICENSE_KEY=\n' > .env   # then paste the licence in an editor; .env is gitignored
+docker compose --profile tools run --rm tyk-bootstrap
 cat bootstrap-output/bootstrap-credentials.txt
 ```
 
-Creates the organisation, admin user, a test API, policies, and Portal configuration. Idempotent:
+It joins the external `tyk` network and reaches the Dashboard at `http://tyk-dashboard:3000`,
+so start `docker/self-managed/` first. The output directory is bind-mounted, so the credentials
+land in `utils/bootstrap/bootstrap-output/` on the host.
+
+Creates the organisation (with `hybrid_enabled`, so an MDCB control plane accepts it), admin user,
+a test API, policies, and Portal configuration. Idempotent:
 re-running detects the `.bootstrap_completed` marker and does not duplicate the organisation —
 which is what makes it usable in the idempotency check.
 
@@ -49,7 +51,7 @@ Against the Dashboard admin API, with `TYK_DB_ADMINSECRET` from `confs/tyk_analy
 # Create an organisation
 curl -s -X POST http://localhost:3000/admin/organisations \
   -H "admin-auth: $ADMIN_SECRET" -H 'Content-Type: application/json' \
-  -d '{"owner_name":"Example","cname_enabled":true}'
+  -d '{"owner_name":"Example","cname_enabled":true,"hybrid_enabled":true}'
 
 # Create a user in it
 curl -s -X POST http://localhost:3000/admin/users \
@@ -89,6 +91,6 @@ reaches an upstream:
 
 ## Reference
 
-- <https://tyk.io/docs/dashboard-admin-api.mdx>
-- <https://tyk.io/docs/tyk-dashboard-api.mdx>
+- <https://tyk.io/docs/dashboard-admin-api>
+- <https://tyk.io/docs/tyk-dashboard-api>
 - <https://tyk.io/docs/getting-started>

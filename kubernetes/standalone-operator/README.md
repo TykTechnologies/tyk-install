@@ -6,15 +6,42 @@ Deploy and manage Tyk APIs using Tyk Kubernetes CRDs.
 
 Tyk Operator is a native Kubernetes operator, allowing you to define and manage APIs as code. This means you can deploy, update, and secure APIs using the same declarative configuration approach Kubernetes uses for other application components.
 
-The Tyk Operator extends Kubernetes with custom resources for managing Tyk APIs:
+The Tyk Operator extends Kubernetes with these custom resources (Operator 1.6.0, all in the
+`tyk.tyk.io/v1alpha1` API group):
 
-- **TykOasApiDefinition** – Defines configuration of OpenAPI based API definition managed by Tyk.
-- **ApiDefinition** – Defines configuration of a Tyk API definition in the older, non-OAS format. New APIs use TykOasApiDefinition.
-- **TykStreamsApiDefinition** – Defines configuration of Tyk Streams APIs.
-- **SecurityPolicy** – Defines configuration of security policies and access control for APIs.
-- **SubGraph** – Defines GraphQL federation subgraph .
-- **SuperGraph** – Defines GraphQL federation supergraph.
-- **OperatorContext** – Controls the operational context and behavior of the Tyk Operator (inc API ownership).
+APIs:
+
+- **TykOasApiDefinition** – A Tyk OAS API. The OpenAPI document lives in a ConfigMap that the resource references.
+- **ApiDefinition** – A Tyk API definition in the older, non-OAS format. New APIs use TykOasApiDefinition.
+- **TykStreamsApiDefinition** – A Tyk Streams API.
+- **TykMcpProxyDefinition** – An MCP proxy that publishes an upstream MCP server through the Gateway.
+- **SubGraph** – A GraphQL federation subgraph.
+- **SuperGraph** – A GraphQL federation supergraph.
+
+Access and credentials:
+
+- **SecurityPolicy** – A security policy: access rights, rate limits and quotas across APIs.
+- **TykSession** – A key (token or basic auth) with its access rights and limits. You can bring the credential in a Kubernetes Secret, and the operator writes the result to one.
+- **TykOAuthClient** – An OAuth 2.0 client bound to an OAuth-enabled API and a policy.
+- **TykCertificate** – A certificate and key from a `kubernetes.io/tls` Secret, uploaded to the Tyk certificate store.
+
+Dashboard objects:
+
+- **TykWebhook** – A reusable Dashboard webhook that API event handlers fire.
+- **TykRuleset** – An API governance ruleset (Spectral) for Tyk OAS or MCP APIs, with a none, warn or block action.
+- **TykUserGroup** – A Dashboard user group and its RBAC permissions.
+- **TykIdentityProfile** – A Tyk Identity Broker profile for single sign-on.
+- **PortalConfig** – Settings of the Dashboard's classic developer portal.
+- **PortalAPICatalogue** – The classic developer portal's API catalogue.
+- **APIDescription** – One API entry in that catalogue.
+
+Operator:
+
+- **OperatorContext** – Which Dashboard (and, for the Kubernetes Gateway API, which data plane) a resource is reconciled against, including API ownership.
+
+The schema of each resource is in the
+[Tyk Operator documentation](https://tyk.io/docs/api-management/automations/operator), and
+`kubectl explain tykoasapidefinition.spec` prints it from the installed CRDs.
 
 **Benefits**:
 
@@ -29,24 +56,14 @@ The Tyk Operator extends Kubernetes with custom resources for managing Tyk APIs:
 
 ## 📋 Prerequisites
 
-- **Existing Tyk Dashboard** (running and accessible)
-- Dashboard API credentials (User API Key + Org ID)
+- A running Tyk Dashboard (Tyk Cloud or Self-Managed) that the cluster can reach, and its URL
+- A dedicated Dashboard user for the Operator (see below), with its API key and Org ID
+- A Tyk Operator licence key
 - Kubernetes 1.34 or 1.35, the versions Operator 1.6.0 lists as compatible
 - Helm 3 or Helm 4
-- kubectl configured
+- kubectl configured for the cluster
 
 ## 🚀 Installation
-
-**Prerequisites**:
-
-Tyk Operator enables declarative API management using Kubernetes CRDs. This is useful for GitOps workflows where you want to manage APIs via Kubernetes manifests.
-
-**Prerequisites:**
-
-- You must have a running Tyk Dashboard. The Operator connects to an existing Dashboard to manage APIs via CRDs.
-- Tyk Operator license key
-- Control Plane Dashboard URL
-- **Separate Dashboard User for Operator**
 
 ### Create a Dedicated User for Operator
 
@@ -61,6 +78,8 @@ Tyk Operator enables declarative API management using Kubernetes CRDs. This is u
 
 **Note:** The operator needs its own credentials to create/manage APIs on the Dashboard.
 
+### Install the Operator
+
 ```bash
 # Add Helm repo
 helm repo add tyk-helm https://helm.tyk.io/public/helm/charts/
@@ -70,7 +89,7 @@ kubectl create namespace tyk-operator
 # Install cert-manager (required for Tyk Operator webhooks)
 helm install \
   cert-manager oci://quay.io/jetstack/charts/cert-manager \
-  --version v1.21.2 \
+  --version v1.21.3 \
   --namespace cert-manager \
   --create-namespace \
   --set crds.enabled=true
@@ -105,8 +124,106 @@ kubectl get pods -n tyk-operator -l control-plane=tyk-operator-controller-manage
 
 - `tyk-operator-controller-manager-xxx` - Running
 
-**Test Operator (Optional):**
-Create a sample API using Tyk Operator CRD to verify it's working. The operator will create the API on your control plane Dashboard, which will then sync to your data plane gateways. Refer to [Tyk Operator documentation](https://tyk.io/docs/api-management/automations/operator) for examples.
+## 📝 Creating APIs with CRDs
+
+Both examples go into the `tyk-operator` namespace. The operator creates the API and the policy on
+your control plane Dashboard, which then syncs them to your data plane Gateways.
+
+### Example 1: Tyk OAS API
+
+A `TykOasApiDefinition` does not carry the OpenAPI document itself. The document, with its
+`x-tyk-api-gateway` extension, goes into a ConfigMap, and `spec.tykOAS.configmapRef` names the
+ConfigMap and the key that holds it:
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: petstore-oas
+  namespace: tyk-operator
+data:
+  petstore.json: |
+    {
+      "openapi": "3.0.3",
+      "info": {"title": "Petstore API", "version": "1.0.0"},
+      "servers": [{"url": "https://petstore.swagger.io/v2"}],
+      "paths": {
+        "/pet/{petId}": {
+          "get": {
+            "operationId": "getPetById",
+            "parameters": [
+              {"name": "petId", "in": "path", "required": true, "schema": {"type": "integer"}}
+            ],
+            "responses": {"200": {"description": "Successful response"}}
+          }
+        }
+      },
+      "x-tyk-api-gateway": {
+        "info": {"name": "petstore", "state": {"active": true}},
+        "upstream": {"url": "https://petstore.swagger.io/v2"},
+        "server": {"listenPath": {"value": "/petstore/", "strip": true}}
+      }
+    }
+---
+apiVersion: tyk.tyk.io/v1alpha1
+kind: TykOasApiDefinition
+metadata:
+  name: petstore
+  namespace: tyk-operator
+spec:
+  tykOAS:
+    configmapRef:
+      name: petstore-oas
+      namespace: tyk-operator
+      keyName: petstore.json
+EOF
+```
+
+The API has no `authentication` block, so it is keyless; add one under
+`x-tyk-api-gateway.server` before exposing anything real.
+
+### Example 2: Security Policy
+
+The policy grants access to the `petstore` API from Example 1. `kind` must name the resource type,
+because it defaults to `ApiDefinition`:
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: tyk.tyk.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: standard-policy
+  namespace: tyk-operator
+spec:
+  name: Standard Policy
+  active: true
+  state: active
+  access_rights_array:
+    - name: petstore
+      namespace: tyk-operator
+      kind: TykOasApiDefinition
+      versions:
+        - Default
+  rate: 100
+  per: 60
+  quota_max: 1000
+  quota_renewal_rate: 3600
+EOF
+```
+
+### Check the resources
+
+```bash
+# List the API and the policy
+kubectl get tykoasapidefinitions,securitypolicies -n tyk-operator
+
+# Describe the API: events show reconcile errors
+kubectl describe tykoasapidefinition petstore -n tyk-operator
+
+# Status, including the Tyk API ID once it is created
+kubectl get tykoasapidefinition petstore -n tyk-operator -o jsonpath='{.status}'
+```
 
 ---
 
@@ -158,78 +275,6 @@ needs cluster-admin. The full walkthrough, with checks, is in the
 
 ---
 
-## 📝 Creating APIs with CRDs
-
-### Example 1: OAS API
-
-```yaml
-apiVersion: tyk.tyk.io/v1alpha1
-kind: TykOasApiDefinition
-metadata:
-  name: petstore
-  namespace: tyk-operator
-spec:
-  tykOAS:
-    info:
-      title: Petstore API
-      version: 1.0.0
-    servers:
-      - url: https://petstore.swagger.io/v2
-    paths:
-      /pet:
-        get:
-          operationId: getPet
-          responses:
-            "200":
-              description: Successful response
-    x-tyk-api-gateway:
-      info:
-        name: petstore
-        state:
-          active: true
-      upstream:
-        url: https://petstore.swagger.io/v2
-      server:
-        listenPath:
-          value: /petstore/
-          strip: true
-```
-
-**Apply:**
-
-```bash
-kubectl apply -f examples/tyk-oas-api-crd.yaml
-```
-
-### Example 2: Security Policy
-
-```yaml
-apiVersion: tyk.tyk.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: standard-policy
-  namespace: tyk-operator
-spec:
-  name: Standard Policy
-  active: true
-  state: active
-  access_rights_array:
-    - name: httpbin
-      namespace: tyk
-      versions:
-        - Default
-  rate: 100
-  per: 60
-  quota_max: 1000
-  quota_renewal_rate: 3600
-```
-
-**Apply:**
-
-```bash
-kubectl apply -f examples/security-policy-crd.yaml
-```
-
 ## Configuration Details
 
 ### Secrets Management
@@ -243,19 +288,6 @@ This secret stores configuration for the Tyk Operator:
 - **TYK_AUTH** - Operator API key
 - **TYK_ORG** - Organization ID
 - **TYK_OPERATOR_LICENSEKEY** - Operator license
-
-## 🧪 Testing
-
-```bash
-# Check API is created
-kubectl get tykoasapidefinition -n tyk-operator
-
-# Describe API
-kubectl describe tykoasapidefinition httpbin -n tyk-operator
-
-# Check status
-kubectl get tykoasapidefinition httpbin -n tyk -o jsonpath='{.status}'
-```
 
 ## 🐛 Troubleshooting
 
@@ -274,7 +306,7 @@ helm show crds tyk-helm/tyk-operator --version 1.6.0 | kubectl apply --server-si
 
 ```bash
 # Check operator logs
-kubectl logs -n tyk -l app.kubernetes.io/name=tyk-operator -f
+kubectl logs -n tyk-operator -l control-plane=tyk-operator-controller-manager -f
 
 # Check API status
 kubectl describe tykoasapidefinition <name> -n tyk-operator

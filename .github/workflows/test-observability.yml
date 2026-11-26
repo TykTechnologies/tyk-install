@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROMETHEUS_IMAGE: quay.io/prometheus/prometheus:v3.15.0
+  PROMETHEUS_IMAGE: quay.io/prometheus/prometheus:v3.15.1
   COLLECTOR_IMAGE: otel/opentelemetry-collector-contrib:0.162.0
 
 jobs:
@@ -141,14 +141,14 @@ jobs:
 
       - name: Bootstrap the Dashboard
         run: |
-          for i in $(seq 1 30); do curl -sf http://localhost:3000/hello > /dev/null && break; sleep 5; done
+          for _ in $(seq 1 30); do curl -sf http://localhost:3000/hello > /dev/null && break; sleep 5; done
           cd docker/getting-started
           docker run --rm --network tyk -v "$(pwd)/bootstrap:/bootstrap" -w /bootstrap \
-            ghcr.io/orange-opensource/hurl:latest --http1.1 --test --variables-file variables.env bootstrap.hurl
+            ghcr.io/orange-opensource/hurl:8.1.0 --http1.1 --test --variables-file variables.env bootstrap.hurl
 
       - name: Send traffic through the Gateway
         run: |
-          for i in $(seq 1 100); do
+          for _ in $(seq 1 100); do
             curl -s -o /dev/null http://localhost:8080/httpbingo/get
             curl -s -o /dev/null -H "Authorization: invalid" http://localhost:8080/httpbingo/get
           done
