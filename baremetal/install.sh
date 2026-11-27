@@ -2,6 +2,7 @@
 # Install Tyk from packages onto a Linux host, with systemd.
 #
 #   sudo ./install.sh --components gateway,dashboard,pump
+#   sudo ./install.sh --components mdcb,portal,sync
 #   ./install.sh --dry-run --components gateway        # prints the plan, changes nothing
 #
 # Idempotent: re-running installs nothing new and rewrites the same drop-ins.
@@ -25,17 +26,38 @@ RPM_KEY=
 # Lookups are case statements rather than associative arrays so this runs on
 # bash 3.2, which is what macOS ships -- --dry-run is meant to be reviewable
 # from any host, not only from the Linux box being installed.
-known()   { case "$1" in gateway|dashboard|pump) return 0 ;; *) return 1 ;; esac; }
-pkg_of()  { printf 'tyk-%s' "$1"; }
-repo_of() { printf 'tyk-%s' "$1"; }
+COMPONENT_LIST="gateway dashboard pump mdcb portal sync"
+known()   { case " $COMPONENT_LIST " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+# packagecloud repository, package, and systemd service per component. Most are
+# tyk-<component>; MDCB ships as tyk-sink from tyk-mdcb-stable, the Developer
+# Portal as portal, and Tyk Sync is a command-line tool with no service.
+repo_of() {
+  case "$1" in mdcb) printf 'tyk-mdcb-stable' ;; portal) printf 'portal' ;; *) printf 'tyk-%s' "$1" ;; esac
+}
+pkg_of() {
+  case "$1" in mdcb) printf 'tyk-sink' ;; portal) printf 'portal' ;; *) printf 'tyk-%s' "$1" ;; esac
+}
+svc_of() {
+  case "$1" in sync) printf '' ;; *) pkg_of "$1" ;; esac
+}
 env_of()  { printf '%s.env' "$1"; }
-conf_of() { printf '/opt/tyk-%s' "$1"; }
+conf_of() { printf '/opt/%s' "$(pkg_of "$1")"; }
+# The licence variable a component's confs/<component>.env expands, if any.
+licence_of() {
+  case "$1" in
+    dashboard) printf 'TYK_LICENSE_KEY' ;;
+    mdcb)      printf 'TYK_MDCB_LICENSE' ;;
+    portal)    printf 'TYK_PORTAL_LICENSE' ;;
+    *)         printf '' ;;
+  esac
+}
 
 usage() {
   cat <<'EOF'
 Usage: sudo ./install.sh [--components gateway,dashboard,pump] [options]
 
-  --components  Comma-separated: gateway, dashboard, pump. Default: gateway.
+  --components  Comma-separated: gateway, dashboard, pump, mdcb, portal, sync.
+                Default: gateway.
   --version     Pin a package version, e.g. 5.16.3. Default: the repo's latest.
   --env-file    File holding licence variables (TYK_LICENSE_KEY, ...). Values are
                 never printed. Without this, the environment is used.
@@ -56,8 +78,9 @@ Usage: sudo ./install.sh [--components gateway,dashboard,pump] [options]
   --dry-run     Print what would happen and exit. Safe to run anywhere.
   -h, --help    This message.
 
-Redis is required for the gateway; PostgreSQL for the dashboard and pump. This
-script does NOT install or configure either - point the drop-ins at yours.
+Redis is required for the gateway and MDCB; PostgreSQL for
+the dashboard, pump, MDCB and portal. This script does NOT install or
+configure either - point confs/<component>.env at yours.
 EOF
 }
 
@@ -140,15 +163,14 @@ if [[ -n "$ENV_FILE" ]]; then
     printf 'env file not found: %s\n' "$ENV_FILE" >&2; exit 1
   fi
 fi
-needs_licence() { [[ "$1" == dashboard ]]; }
 for c in "${SELECTED[@]}"; do
-  if needs_licence "$c"; then
-    if [[ -n "${TYK_LICENSE_KEY:-}" ]]; then
-      log "TYK_LICENSE_KEY: set (value not shown)"
-    else
-      log "TYK_LICENSE_KEY: MISSING - the dashboard will not start without it"
-      log "  add it to --env-file or export it; get one at https://tyk.io/sign-up/"
-    fi
+  var=$(licence_of "$c")
+  [[ -n "$var" ]] || continue
+  if [[ -n "${!var:-}" ]]; then
+    log "$var: set (value not shown)"
+  else
+    log "$var: MISSING - $c will not start without it"
+    log "  add it to --env-file or export it; get one at https://tyk.io/sign-up/"
   fi
 done
 
@@ -396,8 +418,13 @@ if missing:
 
 step "Configuration"
 for c in "${SELECTED[@]}"; do
+  svc=$(svc_of "$c")
+  if [[ -z "$svc" ]]; then
+    log "$c: command-line tool, no service to configure ($(conf_of "$c")/$(pkg_of "$c"))"
+    continue
+  fi
   src="$SCRIPT_DIR/confs/$(env_of "$c")"
-  dst="/etc/default/tyk-${c}"
+  dst="/etc/default/${svc}"
 
   [[ -f "$src" ]] || { printf 'missing %s\n' "$src" >&2; exit 1; }
 
@@ -458,13 +485,13 @@ EOF
   fi
 
   # The drop-in now carries only hardening, not configuration.
-  dropin="/etc/systemd/system/tyk-${c}.service.d/override.conf"
+  dropin="/etc/systemd/system/${svc}.service.d/override.conf"
   log "drop-in $dropin (hardening only)"
   run install -d -m 0755 "$(dirname "$dropin")"
   if [[ "$DRY_RUN" != true ]]; then
     cat > "$dropin" <<'EOF'
 # Managed by tyk-install baremetal/install.sh. Re-running rewrites this file.
-# Configuration lives in /etc/default/tyk-<component>, which the packaged unit
+# Configuration lives in /etc/default/<service>, which the packaged unit
 # already reads. This file is for hardening only.
 [Service]
 Restart=on-failure
@@ -475,16 +502,18 @@ EOF
 done
 
 step "Services"
+run systemctl daemon-reload
 for c in "${SELECTED[@]}"; do
-  run systemctl daemon-reload
-  run systemctl enable "tyk-${c}"
-  run systemctl restart "tyk-${c}"
+  svc=$(svc_of "$c")
+  [[ -n "$svc" ]] || continue
+  run systemctl enable "$svc"
+  run systemctl restart "$svc"
   # Never assert a state change that a dry run did not make -- this line gets
   # copied into reports as evidence.
   if [[ "$DRY_RUN" == true ]]; then
-    log "tyk-${c} would be enabled and restarted"
+    log "$svc would be enabled and restarted"
   else
-    log "tyk-${c} enabled and restarted"
+    log "$svc enabled and restarted"
   fi
 done
 
@@ -492,8 +521,8 @@ step "Next"
 if [[ "$DRY_RUN" == true ]]; then
   log "dry run only - nothing was changed"
 else
-  log "verify with: $SCRIPT_DIR/verify.sh"
-  log "logs with:   journalctl -u tyk-gateway -f"
+  log "verify with: $SCRIPT_DIR/verify.sh --components $COMPONENTS"
+  log "logs with:   journalctl -u <service> -f"
 fi
-log "config dirs: $(conf_of gateway) (and per component)"
+log "config dirs: /opt/<package> per component, e.g. $(conf_of "${SELECTED[0]}")"
 log "docs:        https://tyk.io/docs/tyk-self-managed/install/linux"

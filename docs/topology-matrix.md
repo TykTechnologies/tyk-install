@@ -56,12 +56,12 @@ explicit decision for the user.
 
 | Edition | Directory | Method | Status |
 | --- | --- | --- | --- |
-| Gateway on rpm/deb | `baremetal/` | packages + systemd, Redis and Postgres supplied by the operator | `bundled-tested` (gateway; dashboard and pump `bundled`) |
+| Self-Managed on rpm/deb | `baremetal/` | packages + systemd, Redis and Postgres supplied by the operator | `bundled-tested` (gateway); `bundled` (dashboard, pump, mdcb, portal, sync) |
 
-**Bare metal covers Gateway, Dashboard and Pump only.** There is no bare-metal MDCB, control
-plane, data plane, Portal, or Operator — `baremetal/install.sh` accepts exactly
-`gateway`, `dashboard`, `pump`. So "MDCB on bare metal" and "hybrid on bare metal" are combinations
-with no row. Say so rather than assembling one.
+`baremetal/install.sh --components` takes `gateway`, `dashboard`, `pump`, `mdcb`, `portal` and
+`sync`, one package each. MDCB there is the control-plane side. A bare-metal data-plane Gateway or
+hybrid Gateway, AI Studio (the 2.3 this repository runs is not published as packages) and Tyk
+Operator have no bare-metal path: say so rather than assembling one.
 
 Bare metal needs a Linux host with systemd; the packages cover `ubuntu noble`/`jammy`,
 `debian bookworm` and `el 8`/`9`. `--dry-run` works from any host, including macOS, for reviewing
