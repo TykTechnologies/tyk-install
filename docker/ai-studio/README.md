@@ -1,7 +1,8 @@
 # Tyk AI Studio Docker Install - Quick Guide
 
-Runs Tyk AI Studio 2.2.2 (control plane), an Edge Gateway (data plane) and PostgreSQL with
-Docker Compose. For Kubernetes, see [helm-ai-studio](../../kubernetes/helm-ai-studio/).
+Runs Tyk AI Studio (control plane), an Edge Gateway (data plane) and PostgreSQL with Docker
+Compose. The image versions are set in `.env`. For Kubernetes, see
+[helm-ai-studio](../../kubernetes/helm-ai-studio/).
 
 > The Edge Gateway's image and file names use the older name `microgateway` (for example
 > `tykio/tyk-microgateway` and `mgw-data/`). This guide uses "Edge Gateway" for the same component.
@@ -11,7 +12,8 @@ Docker Compose. For Kubernetes, see [helm-ai-studio](../../kubernetes/helm-ai-st
 - Docker Engine 20.10+ and Docker Compose v2
 - At least 4 GB RAM available
 - OpenSSL for local TLS certificate generation
-- Enterprise Edition only: a Tyk AI license key
+- Enterprise Edition only: a Tyk AI license issued for the AI Studio version you run. AI Studio
+  2.3 refuses a license issued for 2.2 or earlier: ask your Tyk account manager for a 2.3 license.
 
 ---
 
@@ -26,15 +28,19 @@ cd docker/ai-studio
 cp .env.example .env
 ```
 
-Generate the secrets (`openssl rand -hex 16` for each) and update them in `confs/studio.env` and
-`confs/microgateway.env`:
+Generate the secrets (`openssl rand -hex 16` for each) and replace the `__REPLACE_WITH_...__`
+placeholders in `confs/studio.env` and `confs/microgateway.env`:
 
 | AI Studio (`studio.env`)      | Edge Gateway (`microgateway.env`) | Requirement |
 | ----------------------------- | --------------------------------- | ----------- |
 | `GRPC_AUTH_TOKEN`             | `EDGE_AUTH_TOKEN`                 | Must match  |
-| `MICROGATEWAY_ENCRYPTION_KEY` | `ENCRYPTION_KEY`                  | Must match  |
-| `TYK_AI_SECRET_KEY`           | -                                 | AI Studio   |
+| `MICROGATEWAY_ENCRYPTION_KEY` | `ENCRYPTION_KEY`                  | Must match, 32 characters |
+| `TYK_AI_SECRET_KEY`           | -                                 | AI Studio, never change it after the first start |
 | `CSRF_KEY`                    | -                                 | AI Studio   |
+
+AI Studio refuses to start while `TYK_AI_SECRET_KEY`, `MICROGATEWAY_ENCRYPTION_KEY` or
+`GRPC_AUTH_TOKEN` still holds a placeholder, and the Edge Gateway refuses an `ENCRYPTION_KEY` that
+is not 32 characters long.
 
 **CRITICAL:** Ensure NO SPACES around the `=` sign in your env files:
 
@@ -163,7 +169,7 @@ Gateway route you have opened for that; LLM routes need an app key.
 
 The optional files are described in [Optional Components](#optional-components).
 
-The 2.2 images are distroless and run as a non-root user (UID `65532`) from
+The images are distroless and run as a non-root user (UID `65532`) from
 `/opt/tyk-ai-studio` and `/opt/tyk-microgateway`. Relative paths such as `./data/...` resolve
 against those directories.
 
@@ -190,7 +196,9 @@ sudo chown -R 65532:65532 studio-data mgw-data mgw-plugins
 
 **Main secrets in config files:**
 
-- **TYK_AI_SECRET_KEY** - AI Studio secret for encrypting stored secrets and SSO
+- **TYK_AI_SECRET_KEY** - Encrypts LLM credentials, App keys and the secret store, and is needed
+  for SSO. Never change it after the first start: App keys stop validating and stored credentials
+  can no longer be read.
 - **GRPC_AUTH_TOKEN** - Control-plane token used by the Edge Gateway
 - **MICROGATEWAY_ENCRYPTION_KEY** - Shared encryption key for synced configuration
 - **CSRF_KEY** - Keeps CSRF tokens valid across AI Studio restarts
@@ -208,7 +216,13 @@ TYK_AI_LICENSE=your-license-key
 ```
 
 `docker-compose.yml` passes `TYK_AI_LICENSE` to both AI Studio and the Edge Gateway.
-Enterprise containers validate the license at startup.
+Enterprise containers validate the license at startup. AI Studio 2.3 needs a license issued for
+2.3: with an older one it stops with `license validation failed at boot`. Ask your Tyk account
+manager for a 2.3 license.
+
+Enterprise AI Studio and Edge Gateways verify OCI plugin signatures and refuse unsigned plugins
+(`AI_STUDIO_OCI_REQUIRE_SIGNATURE` and `OCI_PLUGINS_REQUIRE_SIGNATURE`). The Community Edition
+cannot verify signatures: it logs a warning and loads OCI plugins unverified.
 
 ### Optional Settings
 
@@ -217,6 +231,29 @@ Enterprise containers validate the license at startup.
 - **Request/response bodies:** the Edge Gateway stores them (and the analytics pulse sends them)
   only with `ANALYTICS_STORE_REQUESTS=true` / `ANALYTICS_STORE_RESPONSES=true`.
 - **SMTP:** required to invite users. Other users must verify their email before they can log in.
+- **`$ENV/` references:** an LLM, tool, data source, embedder or guardrail credential written as
+  `$ENV/NAME` resolves only when `NAME` is listed in `AI_STUDIO_ENV_REF_ALLOWLIST`. Prefer the
+  secret store (`$SECRET/NAME`). Vendor keys such as `OPENAI_API_KEY` are not read from the
+  environment: set them on each LLM, embedder and data source.
+- **Usage telemetry:** AI Studio sends anonymised usage statistics to Tyk by default. Set
+  `TELEMETRY_ENABLED=false` in `confs/studio.env` to stop it, and on Enterprise also
+  `LICENSE_DISABLE_TELEMETRY=true`
+  ([Telemetry and privacy](https://tyk.io/docs/ai-management/ai-studio/telemetry)).
+
+### Internal Network Addresses
+
+AI Studio and the Edge Gateway refuse calls to internal addresses (loopback, private ranges,
+link-local and other internal ranges, by IP or by a name that resolves to one) unless the host is
+allowed. This covers LLMs, embedders, tools, data sources, vector stores and guardrail providers.
+A refused call answers `502` with `blocked by LLM_UPSTREAM_BLOCK_INTERNAL`.
+
+Every container on the Compose network has a private address, so the optional services count as
+internal. `confs/studio.env` and `confs/microgateway.env` allow them by name in
+`LLM_UPSTREAM_ALLOWED_INTERNAL_HOSTS` (`transformer-server`, `reranker`, `presidio-analyzer`,
+`presidio-anonymizer`) and keep blocking on for everything else. Add your own in-network hosts to
+both files, for example a local Ollama reached as `host.docker.internal`. Each process applies its
+own setting, so keep the two lists the same. An administrator can instead turn on **Allow internal
+host** on a single LLM, embedder, tool, data source, guardrail or plugin.
 
 See the [AI Studio](https://tyk.io/docs/ai-management/ai-studio/ai-studio-env) and
 [Edge Gateway](https://tyk.io/docs/ai-management/ai-studio/edge-gateway-env) environment variable
@@ -255,6 +292,8 @@ Listed as optional components in the
 - AI Studio does not call either service on its own. To embed with the Transformer Server, create a
   standalone **Embedder** with API compatibility `openai`, endpoint
   `http://transformer-server:8000/v1` and a model such as `sentence-transformers/all-MiniLM-L6-v2`.
+- Both names are in the internal host allow list (see
+  [Internal Network Addresses](#internal-network-addresses)).
 
 ### Microsoft Presidio (PII Guardrails)
 
@@ -267,6 +306,10 @@ provider and set:
 - **Analyzer URL**: `http://presidio-analyzer:3000`
 - **Anonymizer URL** (optional): `http://presidio-anonymizer:3000`
 
+Both hosts are in the internal host allow list (see
+[Internal Network Addresses](#internal-network-addresses)). From 2.3, guardrails also scan tool
+results, so Presidio receives tool output as well as prompts.
+
 ### Production Settings
 
 From the AI Studio reference architecture. Set `METRICS_AUTH_TOKEN` in `.env` first
@@ -274,7 +317,7 @@ From the AI Studio reference architecture. Set `METRICS_AUTH_TOKEN` in `.env` fi
 
 - Serves the gRPC control connection over TLS with the certificate in `studio-certs/`. The Edge
   Gateway trusts that certificate (`EDGE_TLS_CA_PATH`) and checks it as `ai-studio.localhost`.
-- Sets `CORS_ALLOWED_ORIGINS` to the AI Studio URL and `PLUGIN_BLOCK_INTERNAL_URLS=true`.
+- Sets `CORS_ALLOWED_ORIGINS` to the AI Studio URL.
 - Requires `Authorization: Bearer <METRICS_AUTH_TOKEN>` on `/metrics` for AI Studio and the Edge
   Gateway.
 
@@ -285,12 +328,64 @@ For a real deployment, also use certificates from your own CA, an external Postg
 
 ## Upgrading
 
-Upgrade AI Studio and the Edge Gateway together. Update the versions in `.env`, then:
+Upgrade AI Studio and the Edge Gateway together. Back up the database first: rolling back means
+restoring it. Update the versions in `.env`, then:
 
 ```bash
+docker compose exec -T postgres pg_dump -U tykuser tyk_ai_studio > tyk_ai_studio-backup.sql
 docker compose pull
 docker compose up -d
 ```
+
+### Upgrading from 2.2 to 2.3
+
+Changes made in this bundle:
+
+- **Secrets are placeholders.** The env files ship `__REPLACE_WITH_...__` values, and AI Studio
+  refuses to start while one is left. Keep the secrets you already use: never change
+  `TYK_AI_SECRET_KEY` on an existing database.
+- **Internal addresses are blocked by default** (`LLM_UPSTREAM_BLOCK_INTERNAL=true`). The env
+  files allow the optional services by name. Add any other in-network host you use, such as a local
+  Ollama, before upgrading. See [Internal Network Addresses](#internal-network-addresses).
+- **OCI plugin signatures are required** (`AI_STUDIO_OCI_REQUIRE_SIGNATURE=true`). 2.3 verifies
+  them without `cosign`, so the bundle no longer turns the check off. This only changes the
+  Enterprise Edition: sign your own OCI plugins, configure their keys (`OCI_PLUGINS_PUBKEY_*`), or
+  set both settings to `false`.
+
+Before you upgrade:
+
+- **Enterprise: get a 2.3 license.** A 2.2 license is refused and AI Studio and the Edge Gateway do
+  not start. Keep the 2.2 license until the upgrade is confirmed.
+- **List your `$ENV/` references.** They resolve only for names in `AI_STUDIO_ENV_REF_ALLOWLIST`:
+
+  ```bash
+  docker compose exec -T postgres pg_dump --data-only -U tykuser tyk_ai_studio \
+    | grep -oE '\$ENV/[A-Za-z_][A-Za-z0-9_]*' | sort -u
+  ```
+
+- **Vendor keys are no longer read from the environment** (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
+  and others). Set the key on each LLM, embedder and data source.
+- **Plugins no longer inherit the container environment.** List the variables a plugin needs in
+  `PLUGIN_ENV_PASSTHROUGH`. Upgrade the marketplace plugins to their 2.3 releases (the
+  changelog's "Plugin releases" table). If the Marketplace page still offers an older version,
+  add the plugin by its OCI reference, for example
+  `oci://docker.tyk.io/studio-plugins/llm-cache:1.3.1`.
+- **Back up the database.** The first 2.3 start encrypts LLM keys and App keys with
+  `TYK_AI_SECRET_KEY`. A 2.2 AI Studio started on that database afterwards refuses every App key.
+  `docker compose up -d` stops the 2.2 container before the 2.3 one starts, as required.
+- **Keep `studio-data/` in place for the first start.** 2.3 moves a custom logo and favicon from
+  `studio-data/branding` into the database.
+
+Behavior changes in 2.3 to check:
+
+- **Existing guardrails scan tool results** (Enterprise), and remote providers such as Presidio
+  receive tool output.
+- **Edges older than 2.3** block guardrailed traffic, fail Bedrock calls and do not enforce LLM
+  budgets against a 2.3 AI Studio. Upgrade the Edge Gateway with AI Studio.
+- **The Edge Gateway answers `404` on `/api/v1`.** Configure edges from AI Studio.
+- **API keys are shown in full only when issued.** Roll a key to see a new one.
+
+See the [2.3.0 changelog](https://github.com/TykTechnologies/ai-studio/blob/v2.3.0-rc6/CHANGELOG-v2.3.0.md#upgrade-notes) for the full list.
 
 ### Upgrading from 2.1 to 2.2
 
@@ -325,6 +420,24 @@ See the [AI Studio release notes](https://tyk.io/docs/developer-support/release-
 2. Confirm certificate files exist in `studio-certs/`
 3. Use `https://ai-studio.localhost:4000`, not plain HTTP
 4. Accept the self-signed certificate warning for local development
+
+### AI Studio or the Edge Gateway Exits at Startup
+
+```bash
+docker compose logs tyk-ai-studio microgateway
+```
+
+- `still holds a __REPLACE_WITH_... placeholder`: replace the placeholders in `confs/studio.env`.
+- `encryption key must be exactly 32 characters`: `ENCRYPTION_KEY` (and
+  `MICROGATEWAY_ENCRYPTION_KEY`) must be 32 characters, as `openssl rand -hex 16` gives.
+- `license validation failed at boot`: the Enterprise license is missing, expired or issued for an
+  older version.
+
+### Calls Answer 502 `blocked by LLM_UPSTREAM_BLOCK_INTERNAL`
+
+The upstream resolves to an internal address. Add its host name to
+`LLM_UPSTREAM_ALLOWED_INTERNAL_HOSTS` in both `confs/studio.env` and `confs/microgateway.env`,
+then `docker compose up -d`. See [Internal Network Addresses](#internal-network-addresses).
 
 ### Edge Gateway Not Connecting to AI Studio
 

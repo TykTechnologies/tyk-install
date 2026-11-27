@@ -115,7 +115,7 @@ tyk-dashboard:
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-dashboard
-      tag: v5.16.0
+      tag: v5.16.3
 
     replicaCount: 1 # PROD: Two or more. The Dashboard serves operators, not request traffic, so it does not scale with RPS.
     resources: {}
@@ -144,7 +144,7 @@ tyk-gateway:
     # unpinned chart can change version on `helm repo update`.
     image:
       repository: tykio/tyk-gateway-ee
-      tag: v5.16.0
+      tag: v5.16.3
 
     replicaCount: 1 # PROD: Two or more behind a load balancer; gateways are stateless
     resources: {}

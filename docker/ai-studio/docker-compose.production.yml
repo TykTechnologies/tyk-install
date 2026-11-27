@@ -14,7 +14,6 @@ services:
       GRPC_TLS_CERT_PATH: /opt/tyk-ai-studio/certs/tls-certificate.pem
       GRPC_TLS_KEY_PATH: /opt/tyk-ai-studio/certs/tls-private-key.pem
       CORS_ALLOWED_ORIGINS: https://ai-studio.localhost:4000
-      PLUGIN_BLOCK_INTERNAL_URLS: "true"
       METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:?set METRICS_AUTH_TOKEN in .env}
 
   microgateway:

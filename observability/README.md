@@ -40,9 +40,8 @@ MDCB ──────┘                      ▲          └─> Loki (logs)
 | Pump             | -      | None (Pump has no OpenTelemetry export)                                                                       | -     |
 
 The collector also gathers every component's container logs. Older versions ignore the settings and
-their dashboards stay empty. The control plane metrics need Dashboard 5.16, MDCB 2.14 and Portal 1.20,
-which were pre-releases in October 2026; tyk-install pins Gateway 5.15.1, so the Gateway dashboards
-work today.
+their dashboards stay empty: the control plane metrics need Dashboard 5.16, MDCB 2.14 and Portal 1.20
+or later, the versions this repository pins.
 
 ## Dashboards
 

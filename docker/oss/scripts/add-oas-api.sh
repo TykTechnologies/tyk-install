@@ -12,8 +12,9 @@ DOC="${1:?usage: scripts/add-oas-api.sh <tyk-oas-document.json>}"
 [ "$(python3 -c 'import json,sys; print("x-tyk-api-gateway" in json.load(open(sys.argv[1])))' "${DOC}")" = "True" ] \
   || { echo "${DOC} has no x-tyk-api-gateway extension; a plain OpenAPI document is not a Tyk API definition"; exit 1; }
 
-GATEWAY_VERSION="$(grep -E '^GATEWAY_VERSION=' .env 2>/dev/null | cut -d= -f2 || true)"
-GATEWAY_VERSION="${GATEWAY_VERSION:-v5.16.0}"
+# The pin lives in .env.example (copied to .env), so it is never repeated here.
+GATEWAY_VERSION="$(grep -hE '^GATEWAY_VERSION=' .env .env.example 2>/dev/null | head -n 1 | cut -d= -f2 || true)"
+[ -n "${GATEWAY_VERSION}" ] || { echo "GATEWAY_VERSION not found in .env or .env.example"; exit 1; }
 SECRET="$(grep -E '^TYK_GW_SECRET=' confs/tyk.env | cut -d= -f2 | cut -d' ' -f1)"
 NAME="tyk-oas-import-$$"
 

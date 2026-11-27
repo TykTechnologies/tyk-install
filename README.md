@@ -68,7 +68,7 @@ Or choose a deployment:
 | **Self-Managed** | Full stack: Dashboard, Gateway, Portal, Pump, Redis, PostgreSQL | [README](./docker/self-managed/) |
 | **Hybrid**       | Data plane connecting to Tyk Cloud/MDCB: Gateway, Pump, Redis   | [README](./docker/hybrid/)       |
 | **MDCB**         | Self-managed control plane plus remote data planes              | [README](./docker/mdcb/)         |
-| **AI Studio**    | AI Studio 2.2, Edge Gateway, analytics pulse, and PostgreSQL    | [README](./docker/ai-studio/)    |
+| **AI Studio**    | AI Studio, Edge Gateway, analytics pulse, and PostgreSQL        | [README](./docker/ai-studio/)    |
 
 ### Kubernetes (Helm)
 
@@ -78,7 +78,7 @@ Or choose a deployment:
 | **Self-Managed** | Full stack using `tyk-stack` chart      | [README](./kubernetes/helm-self-managed/)   |
 | **Hybrid**       | Data plane using `tyk-data-plane` chart | [README](./kubernetes/helm-hybrid/)         |
 | **MDCB**         | `tyk-control-plane` and `tyk-data-plane` charts | [README](./kubernetes/helm-mdcb/)   |
-| **AI Studio**    | AI Studio 2.2, Edge Gateway, PostgreSQL | [README](./kubernetes/helm-ai-studio/)      |
+| **AI Studio**    | AI Studio, Edge Gateway, PostgreSQL     | [README](./kubernetes/helm-ai-studio/)      |
 | **Operator**     | Standalone Tyk Operator                 | [README](./kubernetes/standalone-operator/) |
 
 Self-Managed and Hybrid both run on Red Hat OpenShift from tyk-charts 5.4.0 by layering their

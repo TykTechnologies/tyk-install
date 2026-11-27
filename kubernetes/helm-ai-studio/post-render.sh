@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Helm post-renderer for the AI Studio chart.
+# Helm post-renderer for the AI Studio chart: mounts the gRPC CA into the Edge Gateway.
 #
-# The chart has no extraEnv or extra volumes for AI Studio, so settings such as
-# CSRF_KEY, CORS_ALLOWED_ORIGINS or the gRPC TLS paths cannot be set through
-# values. This adds, all optional (nothing breaks when they do not exist):
-#   - ConfigMap tyk-ai-studio-extra and Secret tyk-ai-studio-extra as env for AI Studio
-#   - Secret tyk-ai-studio-grpc-tls at /opt/tyk-ai-studio/certs/grpc (AI Studio)
-#     and its tls.crt at /opt/tyk-microgateway/certs/grpc (Edge Gateway)
+# The Edge Gateway reads the CA for AI Studio's gRPC certificate only from a file
+# (EDGE_TLS_CA_PATH), and its subchart cannot mount extra volumes. This mounts tls.crt
+# from Secret tyk-ai-studio-grpc-tls at /opt/tyk-microgateway/certs/grpc (optional:
+# nothing breaks when the Secret does not exist). Not needed when the gRPC certificate
+# chains to a CA in the system roots. Everything for AI Studio itself is set with chart
+# values (values-production.yaml).
 #
 # Usage, Helm 3: helm upgrade --install ... --post-renderer ./post-render.sh
 # Usage, Helm 4: helm plugin install . (once), then --post-renderer tyk-ai-studio
@@ -21,35 +21,6 @@ cat > "$tmp/kustomization.yaml" <<'EOF'
 resources:
   - all.yaml
 patches:
-  - target:
-      kind: Deployment
-      name: tyk-ai-studio
-    patch: |-
-      - op: add
-        path: /spec/template/spec/containers/0/envFrom/-
-        value:
-          configMapRef:
-            name: tyk-ai-studio-extra
-            optional: true
-      - op: add
-        path: /spec/template/spec/containers/0/envFrom/-
-        value:
-          secretRef:
-            name: tyk-ai-studio-extra
-            optional: true
-      - op: add
-        path: /spec/template/spec/volumes/-
-        value:
-          name: grpc-tls
-          secret:
-            secretName: tyk-ai-studio-grpc-tls
-            optional: true
-      - op: add
-        path: /spec/template/spec/containers/0/volumeMounts/-
-        value:
-          name: grpc-tls
-          mountPath: /opt/tyk-ai-studio/certs/grpc
-          readOnly: true
   - target:
       kind: Deployment
       name: tyk-ai-studio-microgateway
